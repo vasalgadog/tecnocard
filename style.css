@@ -1,0 +1,191 @@
+:root {
+  --card-bg: rgb(205, 133, 63);
+  --step-inactive: rgb(178, 143, 75);
+  --step-active-bg: #ffffff;
+  --step-active-text: rgb(205, 133, 63);
+  --gold: #FFD700;
+}
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+
+.loyalty-card {
+  background-color: var(--card-bg);
+  color: white;
+  width: 340px;
+  height: 670px;
+  border-radius: 28px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.card-header {
+  height: 25%;
+  padding: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  z-index: 10;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.15), transparent);
+}
+
+.header-box{
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 30px;
+  width: 100%;
+  height: 70%;
+}
+
+.logo {
+  max-height: 110px;
+  max-width: 110px;
+  object-fit: contain;
+}
+
+.qr-box {
+  background: white;
+  padding: 8px;
+  border-radius: 12px;
+  display: inline-block;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.qr-mock {
+  width: 100px;
+  height: 100px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='%23333' d='M0 0h20v20H0V0zm2 2v16h16V2H2zm2 2h12v12H4V4zm2 2v2h2V6H6zm0 4v2h2v-2H6zm0 4v2h2v-2H6zm4-8v2h2V6h-2zm0 4v2h2v-2h-2zm0 4v2h2v-2h-2zm4-8v2h2V6h-2zm0 4v2h2v-2h-2zm0 4v2h2v-2h-2z'/%3E%3C/svg%3E");
+  background-size: cover;
+}
+
+.scroll-area {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px 30px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 30px 30px 0 0;
+  scrollbar-width: none;
+}
+
+.scroll-area::-webkit-scrollbar { display: none; }
+
+.stepper {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 60px;
+}
+.step-item {
+  display: flex;
+  position: relative;
+  padding: 15px 25px;
+  align-items: center;
+  min-height: 80px;
+}
+
+.step-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 42.5px;
+  top: 60%;
+  width: 2px;
+  height: calc(100% - 28px);
+  background: var(--step-inactive);
+  z-index: 1;
+}
+
+
+.step-item.completed { opacity: 0.9; }
+.step-item.completed:not(:last-child)::after { background: var(--step-active-bg); }
+
+.step-item.current {
+  opacity: 1;
+  transform: scale(1.2);
+  background-color: rgb(198, 155, 111);
+  background-blend-mode: lighten;
+  border-radius: 20px;
+}
+
+.step-item.current::after {
+  display: none;
+}
+.circle {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: var(--step-inactive);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  z-index: 2;
+  flex-shrink: 0;
+}
+.circle-container {
+  width: 35px;
+  display: flex;
+  justify-content: center;
+  z-index: 3;
+  position: relative;
+}
+.completed .circle {
+  background: var(--step-active-bg);
+  color: var(--step-active-text);
+}
+.current .circle {
+  background: white;
+  color: var(--card-bg);
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+.current .label {
+    color: white;
+    font-weight: 800;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.milestone .circle {
+  border: 2px solid var(--gold);
+}
+.milestone.completed .circle {
+  background: var(--gold);
+  color: #5d4037;
+}
+.content { margin-left: 15px; }
+.label { font-size: 0.95rem; font-weight: 500; }
+.reward-text { font-size: 0.75rem; color: var(--gold); font-weight: bold; display: block; }
+.date-text {
+  font-size: 0.95rem; 
+  font-weight: 500;
+  display: block;
+}
+.current-badge {
+  background: white;
+  color: var(--card-bg);
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+footer{
+  text-align: center;
+  padding: 10px;
+  font-size: 0.75rem;
+  color: rgb(139, 138, 138);
+}
+
+footer a{
+  color: rgb(139, 138, 138);
+  text-decoration: none;
+}

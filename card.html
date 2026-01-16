@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tecnocard - Tarjeta</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+    <div class="loyalty-card">
+    <div class="card-header">
+      <div class="header-box">
+        <img src="/img/logo.png" alt="Tecnopan Logo" class="logo" />
+        <div class="qr-box"><div class="qr-mock"></div></div>
+      </div>
+      <p style="font-size: 0.8rem; margin-top: 8px; opacity: 0.9;">¡Visítanos a diario para tener más sellos!</p>
+    </div>
+
+    <div class="scroll-area" id="scroll-container">
+      <div class="stepper">
+        <div class="step-item completed">
+            <div class="circle">
+                ✓
+            </div>
+            <div class="content">
+                <div class="label">Visita 1</div>
+                <span class="date-text">15-01-2025 | $3.000</span>
+            </div>
+        </div>
+        <div class="step-item completed">
+            <div class="circle">
+                ✓
+            </div>
+            <div class="content">
+                <div class="label">Visita 2</div>
+                <span class="date-text">15-01-2025 | $3.000</span>
+            </div>
+        </div>
+        <div class="step-item completed">
+            <div class="circle">
+                ✓
+            </div>
+            <div class="content">
+                <div class="label">Visita 3</div>
+                <span class="date-text">15-01-2025 | $3.000</span>
+            </div>
+        </div>
+        <div class="step-item completed">
+            <div class="circle">
+                ✓
+            </div>
+            <div class="content">
+                <div class="label">Visita 4</div>
+                <span class="date-text">15-01-2025 | $3.000</span>
+            </div>
+        </div>
+        
+        <div class="step-item completed milestone">
+          <div class="circle">🎁</div>
+          <div class="content">
+            <div class="label">Visita 5</div>
+            <span class="reward-text">15% OFF RECLAMADO</span>
+          </div>
+        </div>
+
+        <div class="step-item current" id="target-step">
+            <div class="step-highlight"></div> <div class="circle-container">
+                <div class="circle">6</div>
+            </div>
+            <div class="content">
+                <div class="label">Visita 6</div>
+                <span class="current-badge">¡Vuelve pronto!</span>
+            </div>
+        </div>
+
+        <div class="step-item"><div class="circle">7</div><div class="content"><div class="label">Visita 7</div></div></div>
+        <div class="step-item"><div class="circle">8</div><div class="content"><div class="label">Visita 8</div></div></div>
+        <div class="step-item"><div class="circle">9</div><div class="content"><div class="label">Visita 9</div></div></div>
+
+        <div class="step-item milestone">
+          <div class="circle">⭐</div>
+          <div class="content">
+            <div class="label">Visita 10</div>
+            <span class="reward-text">META: 25% OFF</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>© 2025 <a href="https://valentin.valra.cl">valentin.valra.cl</a></footer>
+  <script src="/script.js"></script>
+</body>
+</html>
