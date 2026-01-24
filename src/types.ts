@@ -3,7 +3,8 @@ export interface User {
     id: string; // UUID or derived unique ID
     card_id?: string; // Database ID of the loyalty card
     registeredAt: string;
-    visit_history?: VisitHistory[]; // Optional as it might not exist for legacy users immediately
+    visits: number;
+    visit_history: VisitHistory[];
 }
 
 export interface VisitHistory {

@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import HomeView from './views/HomeView';
-import ScannerView from './views/ScannerView';
-import RegisterView from './views/RegisterView';
 import { LoyaltyProvider } from './context/LoyaltyContext';
 import { useLoyalty } from './hooks/useLoyalty';
+
+// Lazy load views for better chunking
+const HomeView = React.lazy(() => import('./views/HomeView'));
+const ScannerView = React.lazy(() => import('./views/ScannerView'));
+const RegisterView = React.lazy(() => import('./views/RegisterView'));
 
 // Component to handle redirection if not logged in
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
@@ -29,11 +31,13 @@ function App() {
         <LoyaltyProvider>
             <Router>
                 <AuthGuard>
-                    <Routes>
-                        <Route path="/" element={<HomeView />} />
-                        <Route path="/tecnoscan" element={<ScannerView />} />
-                        <Route path="/register" element={<RegisterView />} />
-                    </Routes>
+                    <React.Suspense fallback={<div style={{ padding: '20px', textAlign: 'center' }}>Cargando...</div>}>
+                        <Routes>
+                            <Route path="/" element={<HomeView />} />
+                            <Route path="/tecnoscan" element={<ScannerView />} />
+                            <Route path="/register" element={<RegisterView />} />
+                        </Routes>
+                    </React.Suspense>
                 </AuthGuard>
             </Router>
         </LoyaltyProvider>
