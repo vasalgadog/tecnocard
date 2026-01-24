@@ -67,11 +67,7 @@ body {
   justify-content: center;
 }
 
-/* Removed .qr-mock background image styles as we use real QR now */
-.qr-mock {
-  width: 110px;
-  height: 110px;
-}
+/* Removed .qr-mock as we use real QR now */
 
 .scroll-area {
   flex-grow: 1;
