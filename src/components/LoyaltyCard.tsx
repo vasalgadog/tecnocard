@@ -19,8 +19,13 @@ const LoyaltyCard = () => {
 
     // Request notification permission and handle notifications
     useEffect(() => {
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
+        try {
+            const WinNotif = (window as any).Notification;
+            if (WinNotif && WinNotif.permission === 'default' && typeof WinNotif.requestPermission === 'function') {
+                WinNotif.requestPermission().catch(() => { });
+            }
+        } catch (e) {
+            console.warn("Notification permission request failed or rejected by browser.");
         }
     }, []);
 
@@ -34,27 +39,32 @@ const LoyaltyCard = () => {
             }
 
             // Web Notifications (PWA compatible)
-            if ('serviceWorker' in navigator && Notification.permission === 'granted') {
-                let body = `¡Visita #${visits} registrada!`;
+            try {
+                const WinNotif = (window as any).Notification;
+                if ('serviceWorker' in navigator && WinNotif && WinNotif.permission === 'granted') {
+                    let body = `¡Visita #${visits} registrada!`;
 
-                if (visits === 4) {
-                    body += ' ¡Tu próxima visita incluye un 15% OFF!';
-                } else if (visits === 5) {
-                    body = '¡Has ganado 15% OFF en tu próxima compra!';
-                } else if (visits === 9) {
-                    body += ' ¡Tu próxima visita incluye un 25% OFF!';
-                } else if (visits === 10) {
-                    body = '¡Has ganado 25% OFF! ¡Gracias por tu preferencia!';
+                    if (visits === 4) {
+                        body += ' ¡Tu próxima visita incluye un 15% OFF!';
+                    } else if (visits === 5) {
+                        body = '¡Has ganado 15% OFF en tu próxima compra!';
+                    } else if (visits === 9) {
+                        body += ' ¡Tu próxima visita incluye un 25% OFF!';
+                    } else if (visits === 10) {
+                        body = '¡Has ganado 25% OFF! ¡Gracias por tu preferencia!';
+                    }
+
+                    navigator.serviceWorker.ready.then(registration => {
+                        registration.showNotification('Tecnopan', {
+                            body,
+                            icon: './img/logo.png',
+                            badge: './img/logo.png',
+                            vibrate: [200, 100, 200]
+                        } as any).catch(err => console.warn("ServiceWorker showNotification failed:", err));
+                    });
                 }
-
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification('Tecnopan', {
-                        body,
-                        icon: './img/logo.png',
-                        badge: './img/logo.png',
-                        vibrate: [200, 100, 200]
-                    } as any);
-                });
+            } catch (e) {
+                console.warn("Notification system unavailable or threw error:", e);
             }
         }
     }, [visits]);
