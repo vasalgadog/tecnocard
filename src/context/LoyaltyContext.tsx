@@ -149,8 +149,9 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
                 scanned_at: new Date().toISOString()
             };
 
-            const newHistory = [newHistoryItem, ...prev.visit_history];
-            const newVisits = Math.min(prev.visits + 1, 10);
+            const currentHistory = Array.isArray(prev.visit_history) ? prev.visit_history : [];
+            const newHistory = [newHistoryItem, ...currentHistory];
+            const newVisits = Math.min((prev.visits || 0) + 1, 10);
 
             return {
                 ...prev,

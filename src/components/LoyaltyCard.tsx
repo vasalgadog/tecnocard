@@ -33,8 +33,8 @@ const LoyaltyCard = () => {
                 alert('¡Increíble! Has completado 10 visitas. ¡Reclama tu 25% OFF!');
             }
 
-            // Web Notifications
-            if ('Notification' in window && Notification.permission === 'granted') {
+            // Web Notifications (PWA compatible)
+            if ('serviceWorker' in navigator && Notification.permission === 'granted') {
                 let body = `¡Visita #${visits} registrada!`;
 
                 if (visits === 4) {
@@ -47,9 +47,13 @@ const LoyaltyCard = () => {
                     body = '¡Has ganado 25% OFF! ¡Gracias por tu preferencia!';
                 }
 
-                new Notification('Tecnocard', {
-                    body,
-                    icon: './img/logo.png'
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.showNotification('Tecnopan', {
+                        body,
+                        icon: './img/logo.png',
+                        badge: './img/logo.png',
+                        vibrate: [200, 100, 200]
+                    } as any);
                 });
             }
         }
