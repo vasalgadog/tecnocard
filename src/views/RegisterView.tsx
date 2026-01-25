@@ -12,6 +12,12 @@ const RegisterView = () => {
     const { registerUser } = useLoyalty();
 
     const handleLogoClick = () => {
+        const cleanRut = rut.replace(/[^0-9kK]/g, '');
+        if (cleanRut !== '60351112') {
+            setLogoClicks(0);
+            return;
+        }
+
         const newCount = logoClicks + 1;
         if (newCount >= 8) {
             navigate('/tecnoscan');

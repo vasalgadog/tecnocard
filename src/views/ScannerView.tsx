@@ -8,10 +8,12 @@ const ScannerView = () => {
     const [amount, setAmount] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
     const navigate = useNavigate();
-    const { registerVisit } = useLoyalty();
+    const { registerVisit, removeLastVisit, modifyLastVisit } = useLoyalty();
+    const [action, setAction] = useState<'menu' | 'register' | 'modify' | 'remove'>('menu');
 
     useEffect(() => {
         if (scanResult) return;
+        setAction('menu'); // Reset action on new scan
 
         let scanner: Html5QrcodeScanner | null = null;
         let timer: ReturnType<typeof setTimeout>;
@@ -49,40 +51,62 @@ const ScannerView = () => {
         };
     }, [scanResult]);
 
-    const handleRegister = async () => {
-        if (!scanResult || !amount) return;
+    const handleAction = async () => {
+        if (!scanResult) return;
         setIsProcessing(true);
-        const amountNum = parseInt(amount, 10);
 
         try {
-            await registerVisit(scanResult, amountNum);
-            setTimeout(() => {
-                setScanResult(null);
-                setAmount('');
+            let success = false;
+            if (action === 'register') {
+                success = await registerVisit(scanResult, parseInt(amount, 10));
+            } else if (action === 'modify') {
+                success = await modifyLastVisit(scanResult, parseInt(amount, 10));
+            } else if (action === 'remove') {
+                success = await removeLastVisit(scanResult);
+            }
+
+            if (success) {
+                setTimeout(() => {
+                    setScanResult(null);
+                    setAmount('');
+                    setAction('menu');
+                    setIsProcessing(false);
+                    alert("Acción realizada exitosamente");
+                }, 800);
+            } else {
                 setIsProcessing(false);
-                alert("Visita registrada exitosamente");
-            }, 1000);
+                alert("Error al realizar la acción");
+            }
         } catch (e) {
             setIsProcessing(false);
             console.error(e);
         }
     };
 
-    return (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-            <h2>Escanear Código QR</h2>
-            {scanResult ? (
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        handleRegister();
-                    }}
-                    className="success-message"
-                    style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
-                >
-                    <h3>Código Detectado</h3>
-                    <p style={{ opacity: 0.7, wordBreak: 'break-all' }}>{scanResult}</p>
+    const renderActionContent = () => {
+        if (action === 'menu') {
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
+                    <button onClick={() => setAction('register')} className="action-btn primary">✨ Registrar visita</button>
+                    <button onClick={() => setAction('modify')} className="action-btn secondary">✏️ Modificar última</button>
+                    <button onClick={() => setAction('remove')} className="action-btn danger">🗑️ Eliminar última</button>
+                    <button onClick={() => setScanResult(null)} style={{ background: 'transparent', color: '#666', border: 'none', marginTop: '10px' }}>Volver a escanear</button>
+                </div>
+            );
+        }
 
+        return (
+            <form
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    handleAction();
+                }}
+                className="success-message"
+                style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
+            >
+                <h3>{action === 'register' ? 'Nueva Visita' : action === 'modify' ? 'Modificar Última' : 'Confirmar Eliminación'}</h3>
+
+                {action !== 'remove' && (
                     <div>
                         <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Valor ($):</label>
                         <input
@@ -94,20 +118,36 @@ const ScannerView = () => {
                             autoFocus
                         />
                     </div>
+                )}
 
-                    <button
-                        type="submit"
-                        disabled={!amount || isProcessing}
-                        style={{ padding: '14px', background: 'var(--card-bg)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
-                    >
-                        {isProcessing ? 'Registrando...' : 'Confirmar Visita'}
-                    </button>
-                </form>
+                {action === 'remove' && <p>¿Estás seguro que deseas eliminar la última visita registrada?</p>}
+
+                <button
+                    type="submit"
+                    disabled={(action !== 'remove' && !amount) || isProcessing}
+                    style={{ padding: '14px', background: action === 'remove' ? '#ef4444' : 'var(--card-bg)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                    {isProcessing ? 'Procesando...' : 'Confirmar'}
+                </button>
+                <button type="button" onClick={() => setAction('menu')} style={{ background: 'none', border: 'none', color: '#666' }}>Cancelar</button>
+            </form>
+        );
+    };
+
+    return (
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+            <h2>Escanear Código QR</h2>
+            {scanResult ? (
+                renderActionContent()
             ) : (
                 <div id="reader" style={{ width: '100%', maxWidth: '500px', margin: '0 auto' }}></div>
             )}
-            <br />
-            <button onClick={() => navigate('/')}>Cancelar / Volver</button>
+            {!scanResult && (
+                <>
+                    <br />
+                    <button onClick={() => navigate('/')}>Cancelar / Volver</button>
+                </>
+            )}
         </div>
     );
 };

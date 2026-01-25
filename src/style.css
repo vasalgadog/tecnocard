@@ -53,6 +53,8 @@ body {
   max-height: 110px;
   max-width: 110px;
   object-fit: contain;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .qr-box {
@@ -351,4 +353,76 @@ footer {
 footer a {
   color: rgb(139, 138, 138);
   text-decoration: none;
+}
+
+/* Action Button System */
+.action-btn {
+  padding: 14px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-btn.primary {
+  background: var(--card-bg);
+  color: white;
+}
+
+.action-btn.secondary {
+  background: #6272a4;
+  /* Modern muted indigo */
+  color: white;
+}
+
+.action-btn.danger {
+  background: #ff5555;
+  color: white;
+}
+
+.action-btn.outline {
+  background: transparent;
+  border: 2px solid var(--card-bg);
+  color: var(--card-bg);
+  box-shadow: none;
+}
+
+.action-btn.text {
+  background: transparent;
+  color: #666;
+  box-shadow: none;
+  font-size: 14px;
+}
+
+.scanner-container {
+  padding: 24px;
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.scanner-card {
+  background: white;
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  margin-top: 20px;
 }

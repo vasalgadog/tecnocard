@@ -163,12 +163,64 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
         return true;
     };
 
+    const removeLastVisit = async (code: string): Promise<boolean> => {
+        const { data, error } = await supabase.rpc('delete_last_visit', {
+            p_qr_code: code
+        });
+
+        if (error) {
+            console.error('Error deleting last visit:', error);
+            return false;
+        }
+
+        const responseData = Array.isArray(data) ? data[0] : data;
+        if (responseData) {
+            setUser(prev => prev ? {
+                ...prev,
+                visits: responseData.visits ?? 0,
+                visit_history: responseData.visit_history ?? []
+            } : null);
+        }
+        return true;
+    };
+
+    const modifyLastVisit = async (code: string, newAmount: number): Promise<boolean> => {
+        const { data, error } = await supabase.rpc('update_last_visit', {
+            p_qr_code: code,
+            p_amount_paid: newAmount
+        });
+
+        if (error) {
+            console.error('Error updating last visit:', error);
+            return false;
+        }
+
+        const responseData = Array.isArray(data) ? data[0] : data;
+        if (responseData) {
+            setUser(prev => prev ? {
+                ...prev,
+                visits: responseData.visits ?? 0,
+                visit_history: responseData.visit_history ?? []
+            } : null);
+        }
+        return true;
+    };
+
     const resetProgress = () => {
         setUser(prev => prev ? { ...prev, visits: 0, visit_history: [] } : null);
     };
 
     return (
-        <LoyaltyContext.Provider value={{ user, visits, visit_history: visitHistory, registerUser, registerVisit, resetProgress }}>
+        <LoyaltyContext.Provider value={{
+            user,
+            visits,
+            visit_history: visitHistory,
+            registerUser,
+            registerVisit,
+            removeLastVisit,
+            modifyLastVisit,
+            resetProgress
+        }}>
             {children}
         </LoyaltyContext.Provider>
     );

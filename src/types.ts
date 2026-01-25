@@ -22,5 +22,7 @@ export interface LoyaltyState {
 export interface LoyaltyContextType extends LoyaltyState {
     registerUser: (rut: string) => Promise<void>;
     registerVisit: (code: string, amount: number) => Promise<boolean>;
+    removeLastVisit: (code: string) => Promise<boolean>;
+    modifyLastVisit: (code: string, newAmount: number) => Promise<boolean>;
     resetProgress: () => void;
 }

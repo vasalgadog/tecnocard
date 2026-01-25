@@ -6,6 +6,6 @@ import './style.css'
 ReactDOM.createRoot(document.getElementById('app')!).render(
     <React.StrictMode>
         <App />
-        <footer>© 2025 <a href="https://valentin.valra.cl">valentin.valra.cl</a></footer>
+        <footer>© 2026 <a href="https://valentin.valra.cl">valentin.valra.cl</a></footer>
     </React.StrictMode>,
 )
