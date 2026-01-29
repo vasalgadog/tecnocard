@@ -103,7 +103,7 @@ const LoyaltyCard = () => {
                         </div>
                     </div>
                     <p className="greeting">
-                        ¡Hola! Visítanos para obtenermás sellos.
+                        ¡Hola! Visítanos para obtener más sellos.
                     </p>
                 </div>
 
