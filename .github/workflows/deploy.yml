@@ -19,6 +19,9 @@ jobs:
           node-version: '20'
 
       - name: Installation y Build 🏗️
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           npm install
           npm run build  # Aquí se genera tu carpeta 'dist' o 'build'
