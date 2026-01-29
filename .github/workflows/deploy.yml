@@ -40,19 +40,39 @@ jobs:
           username: ${{ secrets.USRNM }}
           key: ${{ secrets.SSH_PRIV_KEY }}
           script: |
-            CURRENT_LINK="/var/www/${{ secrets.DIRECTORY_NAME }}/tecnocard/current"
-            NEW_RELEASE="/var/www/${{ secrets.DIRECTORY_NAME }}/tecnocard/releases/${{ github.sha }}"
-            BACKUP_RELEASE=$(readlink -f $CURRENT_LINK)
+            # 1. Definición de variables con rutas absolutas
+            BASE_PATH="/var/www/${{ secrets.DIRECTORY_NAME }}/tecnocard"
+            CURRENT_LINK="$BASE_PATH/current"
+            NEW_RELEASE="$BASE_PATH/releases/${{ github.sha }}"
+            
+            # 2. Guardar backup del estado actual (punto de restauración)
+            # Si el link no existe (primer deploy), fallará silenciosamente el readlink
+            BACKUP_RELEASE=$(readlink -f $CURRENT_LINK || echo "")
 
-            sudo ln -sfn $NEW_RELEASE $CURRENT_LINK
+            echo "Ajustando permisos de la nueva versión..."
+            # Aseguramos que el grupo sea www-data y tenga permisos de lectura
+            sudo chown -R ${{ secrets.USRNM }}:www-data "$NEW_RELEASE"
+            sudo chmod -R 775 "$NEW_RELEASE"
 
+            echo "Actualizando enlace simbólico: $CURRENT_LINK -> $NEW_RELEASE"
+            # ln -sfnv: v para ver el cambio exacto en los logs
+            sudo ln -sfnv "$NEW_RELEASE" "$CURRENT_LINK"
+
+            # 3. Validación y reinicio
             if sudo nginx -t; then
-              echo "Validación exitosa. Reiniciando Nginx..."
+              echo "✅ Validación de Nginx exitosa. Reiniciando..."
               sudo systemctl restart nginx
-              cd /var/www/${{ secrets.DIRECTORY_NAME }}/tecnocard/releases && ls -t | tail -n +6 | xargs rm -rf --
+              
+              # Limpieza: mantener solo las últimas 5 versiones para ahorrar espacio
+              echo "Limpiando releases antiguas..."
+              cd "$BASE_PATH/releases" && ls -t | tail -n +6 | xargs rm -rf --
             else
-              echo "Error detectado en la nueva versión. Haciendo Rollback..."
-              sudo ln -sfn $BACKUP_RELEASE $CURRENT_LINK
-              sudo rm -rf $NEW_RELEASE
+              echo "❌ ERROR en la nueva versión. Iniciando Rollback..."
+              if [ -n "$BACKUP_RELEASE" ]; then
+                sudo ln -sfnv "$BACKUP_RELEASE" "$CURRENT_LINK"
+                echo "Restaurado a la versión: $BACKUP_RELEASE"
+              fi
+              # Eliminamos la versión fallida para evitar acumulaciones corruptas
+              sudo rm -rf "$NEW_RELEASE"
               exit 1
             fi
