@@ -86,7 +86,7 @@ const RegisterView = () => {
                 alt="Tecnopan Logo"
                 className="logo"
                 onClick={handleLogoClick}
-                style={{ cursor: 'pointer', userSelect: 'none' }}
+                style={{ cursor: 'default', userSelect: 'none' }}
             />
             <h2>Crea o ingresa a tu Tarjeta</h2>
             <p style={{ opacity: 0.7 }}>Ingresa tu RUT para crear o acceder a tu tarjeta digital.</p>
