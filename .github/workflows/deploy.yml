@@ -1,0 +1,58 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main  # Se activa cuando subes algo a la rama main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cinfigure Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Installation y Build 🏗️
+        run: |
+          npm install
+          npm run build  # Aquí se genera tu carpeta 'dist' o 'build'
+
+      - name: Deploy to VPS via SCP 🚀
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REM_HST }}
+          username: ${{ secrets.USRNM }}
+          key: ${{ secrets.SSH_PRIV_KEY }}
+          source: "dist/*"
+          target: "/var/www/${{ secrets.DIRECTORY_NAME }}/tecnocard/releases/${{ github.sha }}"
+          strip_components: 1
+
+      - name: Restart services via SSH 🔄
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REM_HST }}
+          username: ${{ secrets.USRNM }}
+          key: ${{ secrets.SSH_PRIV_KEY }}
+          script: |
+            CURRENT_LINK="/var/www/${{ secrets.DIRECTORY_NAME }}/tecnocard/current"
+            NEW_RELEASE="/var/www/${{ secrets.DIRECTORY_NAME }}/tecnocard/releases/${{ github.sha }}"
+            BACKUP_RELEASE=$(readlink -f $CURRENT_LINK)
+
+            sudo ln -sfn $NEW_RELEASE $CURRENT_LINK
+
+            if sudo nginx -t; then
+              echo "Validación exitosa. Reiniciando Nginx..."
+              sudo systemctl restart nginx
+              cd /var/www/${{ secrets.DIRECTORY_NAME }}/tecnocard/releases && ls -t | tail -n +6 | xargs rm -rf --
+            else
+              echo "Error detectado en la nueva versión. Haciendo Rollback..."
+              sudo ln -sfn $BACKUP_RELEASE $CURRENT_LINK
+              sudo rm -rf $NEW_RELEASE
+              exit 1
+            fi
