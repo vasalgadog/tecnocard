@@ -3,18 +3,58 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useNavigate } from 'react-router-dom';
 import { useLoyalty } from '../hooks/useLoyalty';
 
+import { supabase } from '../supabase';
+
 const ScannerView = () => {
     const [scanResult, setScanResult] = useState<string | null>(null);
     const [amount, setAmount] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
+    const [lastVisit, setLastVisit] = useState<{ amount: number; date: string } | null>(null);
+    const [isLoadingVisit, setIsLoadingVisit] = useState(false);
     const navigate = useNavigate();
     const { registerVisit, removeLastVisit, modifyLastVisit } = useLoyalty();
     const [action, setAction] = useState<'menu' | 'register' | 'modify' | 'remove'>('menu');
 
     useEffect(() => {
+        if (action === 'modify' && scanResult) {
+            setLastVisit(null); // Clear previous
+            setIsLoadingVisit(true);
+
+            // Fetch last visit
+            const fetchLastVisit = async () => {
+                try {
+                    // Optimized: RPC now accepts QR code directly
+                    const { data, error } = await supabase.rpc('get_last_visit_by_card', {
+                        p_qr_code: scanResult
+                    });
+
+                    if (error) {
+                        console.error(error);
+                    } else {
+                        const visitData = Array.isArray(data) ? data[0] : data;
+                        if (visitData && visitData.amount_paid) {
+                            setLastVisit({
+                                amount: visitData.amount_paid,
+                                date: visitData.scanned_at || new Date().toISOString()
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error fetching last visit", e);
+                } finally {
+                    setIsLoadingVisit(false);
+                }
+            };
+            fetchLastVisit();
+        }
+    }, [action, scanResult]);
+
+    useEffect(() => {
         if (scanResult) return;
         setAction('menu'); // Reset action on new scan
-
+        setLastVisit(null);
+        setIsLoadingVisit(false);
+        // ... existing scanner simple-setup ...
         let scanner: Html5QrcodeScanner | null = null;
         let timer: ReturnType<typeof setTimeout>;
 
@@ -71,6 +111,7 @@ const ScannerView = () => {
                     setAmount('');
                     setAction('menu');
                     setIsProcessing(false);
+                    setLastVisit(null);
                     alert("Acción realizada exitosamente");
                 }, 800);
             } else {
@@ -105,6 +146,23 @@ const ScannerView = () => {
                 style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
             >
                 <h3>{action === 'register' ? 'Nueva Visita' : action === 'modify' ? 'Modificar Última' : 'Confirmar Eliminación'}</h3>
+
+                {action === 'modify' && (
+                    <>
+                        {isLoadingVisit && (
+                            <div style={{ color: '#666', fontStyle: 'italic', padding: '10px' }}>
+                                ⏳ Buscando último registro...
+                            </div>
+                        )}
+                        {!isLoadingVisit && lastVisit && (
+                            <div style={{ background: '#fef3c7', padding: '10px', borderRadius: '6px', fontSize: '0.9em', color: '#854d0e' }}>
+                                <div><strong>Último registro detectado:</strong></div>
+                                <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}>${lastVisit.amount.toLocaleString()}</div>
+                                <div>{new Date(lastVisit.date).toLocaleString()}</div>
+                            </div>
+                        )}
+                    </>
+                )}
 
                 {action !== 'remove' && (
                     <div>

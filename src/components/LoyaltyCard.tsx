@@ -6,6 +6,12 @@ import InfoModal from './InfoModal';
 const LoyaltyCard = () => {
     const { visits, user, visit_history } = useLoyalty();
     const [showInfo, setShowInfo] = useState(false);
+    const prevVisits = React.useRef(visits);
+
+    // Initialize ref on mount to current visits to avoid invalid "new visit" detection
+    useEffect(() => {
+        prevVisits.current = visits;
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -30,7 +36,8 @@ const LoyaltyCard = () => {
     }, []);
 
     useEffect(() => {
-        if (visits > 0) {
+        // Only trigger if visits count INCREASED
+        if (visits > prevVisits.current) {
             // Milestone alerts
             if (visits === 5) {
                 alert('¡Felicidades! Has completado 5 visitas. ¡Disfruta tu 15% OFF!');
@@ -67,16 +74,22 @@ const LoyaltyCard = () => {
                 console.warn("Notification system unavailable or threw error:", e);
             }
         }
+
+        // Update ref after processing
+        prevVisits.current = visits;
     }, [visits]);
+
+    // Memoize sorted history to ensure consistency and avoid re-sorting on every render/map call
+    const sortedHistory = React.useMemo(() => {
+        if (!visit_history) return [];
+        return [...visit_history].sort((a, b) =>
+            new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime()
+        );
+    }, [visit_history]);
 
     // Helper to get formatted date/amount
     const getHistoryText = (idx: number) => {
-        if (!visit_history) return '';
-        // Sort ascending
-        const sorted = [...visit_history].sort((a, b) =>
-            new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime()
-        );
-        const record = sorted[idx];
+        const record = sortedHistory[idx];
         if (!record) return '';
 
         const date = new Date(record.scanned_at).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
