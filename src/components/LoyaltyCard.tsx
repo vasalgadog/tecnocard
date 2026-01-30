@@ -87,6 +87,53 @@ const LoyaltyCard = () => {
         );
     }, [visit_history]);
 
+    // Track previous history to detect amount updates
+    const prevHistoryRef = React.useRef<{ [id: string]: number }>({});
+    const [highlightedVisitId, setHighlightedVisitId] = useState<string | null>(null);
+
+    // Initialize ref once
+    useEffect(() => {
+        if (visit_history) {
+            const map: { [id: string]: number } = {};
+            visit_history.forEach(v => {
+                if (v.id) map[v.id] = v.amount_paid;
+            });
+            // Only set if empty (first mount)
+            if (Object.keys(prevHistoryRef.current).length === 0) {
+                prevHistoryRef.current = map;
+            }
+        }
+    }, []); // Run once on mount to capture initial state if needed, 
+    // BUT actually we want to update ref after checks.
+
+    // Detect changes in amounts
+    useEffect(() => {
+        if (!visit_history) return;
+
+        const currentMap: { [id: string]: number } = {};
+        let changedId: string | null = null;
+
+        visit_history.forEach(v => {
+            if (v.id) {
+                currentMap[v.id] = v.amount_paid;
+                // Check if this ID existed and amount changed
+                const prevAmount = prevHistoryRef.current[v.id];
+                if (prevAmount !== undefined && prevAmount !== v.amount_paid) {
+                    changedId = v.id;
+                }
+            }
+        });
+
+        if (changedId) {
+            setHighlightedVisitId(changedId);
+            // Clear highlight after animation
+            setTimeout(() => setHighlightedVisitId(null), 2000);
+        }
+
+        // Update ref
+        prevHistoryRef.current = currentMap;
+    }, [visit_history]);
+
     // Helper to get formatted date/amount
     const getHistoryText = (idx: number) => {
         const record = sortedHistory[idx];
@@ -128,9 +175,14 @@ const LoyaltyCard = () => {
                             const status = isCompleted ? 'completed' : isCurrent ? 'current' : '';
                             const isMilestone = step === 5 || step === 10;
 
+                            // Check highlight
+                            const record = isCompleted ? sortedHistory[step - 1] : null;
+                            const isHighlighted = record && record.id === highlightedVisitId;
+                            const highlightClass = isHighlighted ? 'highlight-update' : '';
+
                             if (isMilestone) {
                                 return (
-                                    <div className={`step-item milestone ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''}`} key={step}>
+                                    <div className={`step-item milestone ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''} ${highlightClass}`} key={step}>
                                         {isCurrent && <div className="step-highlight"></div>}
                                         <div className="circle">{step === 5 ? '🎁' : '⭐'}</div>
                                         <div className="content">
@@ -150,7 +202,7 @@ const LoyaltyCard = () => {
                             }
 
                             return (
-                                <div className={`step-item ${status}`} id={status === 'current' ? "target-step" : ""} key={step}>
+                                <div className={`step-item ${status} ${highlightClass}`} id={status === 'current' ? "target-step" : ""} key={step}>
                                     {status === 'current' && <div className="step-highlight"></div>}
                                     <div className="circle-container">
                                         <div className="circle">{status === 'completed' ? '✓' : step}</div>

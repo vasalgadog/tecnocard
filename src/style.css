@@ -1,3 +1,21 @@
+@keyframes highlight-pulse {
+  0% {
+    background-color: rgba(255, 215, 0, 0.4);
+    transform: scale(1.02);
+  }
+
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+.highlight-update {
+  animation: highlight-pulse 1.5s ease-out;
+  border-radius: 8px;
+  /* Match step-item radius if needed */
+}
+
 :root {
   --card-bg: rgb(205, 133, 63);
   --step-inactive: rgb(178, 143, 75);
