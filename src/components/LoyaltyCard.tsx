@@ -54,7 +54,7 @@ const LoyaltyCard = () => {
                     if (visits === 4) {
                         body += ' ¡Tu próxima visita incluye un 15% OFF!';
                     } else if (visits === 5) {
-                        body = '¡Has ganado 15% OFF en tu próxima compra!';
+                        body = '¡Has ganado 15% OFF en tu compra!';
                     } else if (visits === 9) {
                         body += ' ¡Tu próxima visita incluye un 25% OFF!';
                     } else if (visits === 10) {
