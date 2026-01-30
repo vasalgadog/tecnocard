@@ -5,20 +5,21 @@ import './style.css'
 import { registerSW } from 'virtual:pwa-register'
 
 // Safe Update Logic
-const updateSW = registerSW({
-    onNeedRefresh() {
-        if (document.visibilityState === 'visible') {
-            if (confirm('Nueva versión disponible. ¿Recargar ahora?')) {
-                updateSW(true); // skipWaiting
-            }
-        } else {
-            // Update silently if backgrounded
-            updateSW(true);
-        }
+// Auto-update logic
+registerSW({
+    onRegistered(r) {
+        r && setInterval(() => {
+            r.update();
+        }, 60 * 60 * 1000); // Check for updates every hour
     },
-    onOfflineReady() {
-        console.log('App lista para trabajar offline');
-    },
+});
+
+// Force reload when new service worker takes control
+let refreshing = false;
+navigator.serviceWorker?.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
 });
 
 ReactDOM.createRoot(document.getElementById('app')!).render(
