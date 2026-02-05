@@ -25,6 +25,6 @@ navigator.serviceWorker?.addEventListener('controllerchange', () => {
 ReactDOM.createRoot(document.getElementById('app')!).render(
     <React.StrictMode>
         <App />
-        <footer>© 2026 <a href="https://valentin.valra.cl">valentin.valra.cl</a></footer>
+        <footer>© 2026 <a href="https://valentin.valra.cl" target="_blank">valentin.valra.cl</a></footer>
     </React.StrictMode>,
 )

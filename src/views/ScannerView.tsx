@@ -49,7 +49,7 @@ const ScannerView = () => {
 
             scanner = new Html5QrcodeScanner(
                 "reader",
-                { fps: 10, qrbox: 150, aspectRatio: 1.777778, supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA], showTorchButtonIfSupported: true },
+                { fps: 10, qrbox: 250, aspectRatio: 1.777778, supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA], showTorchButtonIfSupported: true },
                 false
             );
 
@@ -133,7 +133,7 @@ const ScannerView = () => {
                         className="action-btn primary"
                         style={{ padding: '15px', fontSize: '1.1rem' }}
                     >
-                        {isProcessing ? 'Procesando...' : '✨ Sellar Tarjeta'}
+                        {isProcessing ? 'Procesando...' : '✨ Registrar Visita'}
                     </button>
 
                     <button
@@ -142,7 +142,7 @@ const ScannerView = () => {
                         className="action-btn danger"
                         style={{ padding: '10px' }}
                     >
-                        🗑️ Eliminar última
+                        🗑️ Eliminar última visita
                     </button>
                 </div>
 
@@ -165,7 +165,7 @@ const ScannerView = () => {
                 }}>📊 Dashboard</button>
             </div>
 
-            <h2>Scanner de Personal</h2>
+            <h2>Escanear tarjeta</h2>
 
             {scanResult ? (
                 renderScanContent()
