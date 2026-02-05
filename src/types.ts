@@ -4,7 +4,7 @@ export interface User {
     card_id?: string; // Database ID of the loyalty card
     registeredAt: string;
     visits: number;
-    visit_history: VisitHistory[];
+    visits_history: VisitHistory[];
 }
 
 export interface VisitHistory {
@@ -16,13 +16,31 @@ export interface VisitHistory {
 export interface LoyaltyState {
     user: User | null;
     visits: number;
-    visit_history: VisitHistory[];
+    visits_history: VisitHistory[];
+}
+
+export interface DashboardMetrics {
+    total_cards: number;
+    visits_today: number;
+    levels: {
+        "0_4": number;
+        "5": number;
+        "6_9": number;
+        "10": number;
+    };
+    milestones_today: {
+        "5": number;
+        "10": number;
+    };
 }
 
 export interface LoyaltyContextType extends LoyaltyState {
     registerUser: (rut: string) => Promise<void>;
-    registerVisit: (code: string, amount: number) => Promise<boolean>;
-    removeLastVisit: (code: string) => Promise<boolean>;
-    modifyLastVisit: (code: string, newAmount: number) => Promise<boolean>;
+    registerVisit: (code: string) => Promise<boolean>;
+    removeLastVisit: (scanResult: string) => Promise<boolean>;
+    fetchCardData: () => Promise<void>;
+    fetchDashboardMetrics: () => Promise<DashboardMetrics>;
     resetProgress: () => void;
+    isSyncing?: boolean;
 }
+

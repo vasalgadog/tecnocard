@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import { useNavigate } from 'react-router-dom';
 import { useLoyalty } from '../hooks/useLoyalty';
 
@@ -7,54 +7,40 @@ import { supabase } from '../supabase';
 
 const ScannerView = () => {
     const [scanResult, setScanResult] = useState<string | null>(null);
-    const [amount, setAmount] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
-    const [lastVisit, setLastVisit] = useState<{ amount: number; date: string } | null>(null);
-    const [isLoadingVisit, setIsLoadingVisit] = useState(false);
+    const [currentVisits, setCurrentVisits] = useState<number | null>(null);
+    const [isLoadingCard, setIsLoadingCard] = useState(false);
     const navigate = useNavigate();
-    const { registerVisit, removeLastVisit, modifyLastVisit } = useLoyalty();
-    const [action, setAction] = useState<'menu' | 'register' | 'modify' | 'remove'>('menu');
+    const { registerVisit, removeLastVisit } = useLoyalty();
+    const [highlight, setHighlight] = useState(false);
 
+    // Fetch card status on scan
     useEffect(() => {
-        if (action === 'modify' && scanResult) {
-            setLastVisit(null); // Clear previous
-            setIsLoadingVisit(true);
-
-            // Fetch last visit
-            const fetchLastVisit = async () => {
+        if (scanResult) {
+            setIsLoadingCard(true);
+            const fetchStatus = async () => {
                 try {
-                    // Optimized: RPC now accepts QR code directly
-                    const { data, error } = await supabase.rpc('get_last_visit_by_card', {
+                    const { data, error } = await supabase.rpc('get_visits_by_card', {
                         p_qr_code: scanResult
                     });
-
-                    if (error) {
-                        console.error(error);
-                    } else {
-                        const visitData = Array.isArray(data) ? data[0] : data;
-                        if (visitData && visitData.amount_paid) {
-                            setLastVisit({
-                                amount: visitData.amount_paid,
-                                date: visitData.scanned_at || new Date().toISOString()
-                            });
-                        }
+                    if (!error && data) {
+                        const card = Array.isArray(data) ? data[0] : data;
+                        setCurrentVisits(card.visits ?? 0);
                     }
                 } catch (e) {
-                    console.error("Error fetching last visit", e);
+                    console.error("Error fetching card", e);
                 } finally {
-                    setIsLoadingVisit(false);
+                    setIsLoadingCard(false);
                 }
             };
-            fetchLastVisit();
+            fetchStatus();
         }
-    }, [action, scanResult]);
+    }, [scanResult]);
 
     useEffect(() => {
         if (scanResult) return;
-        setAction('menu'); // Reset action on new scan
-        setLastVisit(null);
-        setIsLoadingVisit(false);
-        // ... existing scanner simple-setup ...
+        setCurrentVisits(null);
+
         let scanner: Html5QrcodeScanner | null = null;
         let timer: ReturnType<typeof setTimeout>;
 
@@ -63,151 +49,131 @@ const ScannerView = () => {
 
             scanner = new Html5QrcodeScanner(
                 "reader",
-                { fps: 10, qrbox: { width: 250, height: 250 } },
+                { fps: 10, qrbox: 150, aspectRatio: 1.777778, supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA], showTorchButtonIfSupported: true },
                 false
             );
 
             scanner.render(onScanSuccess, onScanFailure);
         }, 100);
 
-        function onScanSuccess(decodedText: string, _decodedResult: any) {
+        function onScanSuccess(decodedText: string) {
             if (scanner) {
-                scanner.clear();
+                scanner.clear().catch(() => { });
             }
             setScanResult(decodedText);
         }
 
-        function onScanFailure(_error: any) { }
+        function onScanFailure() { }
 
         return () => {
             clearTimeout(timer);
             if (scanner) {
                 try {
-                    scanner.clear().catch(error => {
-                        console.error("Failed to clear html5-qrcode scanner. ", error);
-                    });
+                    scanner.clear().catch(() => { });
                 } catch (e) { /* ignore */ }
             }
         };
     }, [scanResult]);
 
-    const handleAction = async () => {
+    const handleRegister = async () => {
         if (!scanResult) return;
         setIsProcessing(true);
-
-        try {
-            let success = false;
-            if (action === 'register') {
-                success = await registerVisit(scanResult, parseInt(amount, 10));
-            } else if (action === 'modify') {
-                success = await modifyLastVisit(scanResult, parseInt(amount, 10));
-            } else if (action === 'remove') {
-                success = await removeLastVisit(scanResult);
-            }
-
-            if (success) {
-                setTimeout(() => {
-                    setScanResult(null);
-                    setAmount('');
-                    setAction('menu');
-                    setIsProcessing(false);
-                    setLastVisit(null);
-                    alert("Acción realizada exitosamente");
-                }, 800);
-            } else {
+        const success = await registerVisit(scanResult);
+        if (success) {
+            setHighlight(true);
+            setCurrentVisits(prev => (prev !== null ? prev + 1 : 1));
+            setTimeout(() => {
+                setHighlight(false);
+                setScanResult(null);
                 setIsProcessing(false);
-                alert("Error al realizar la acción");
-            }
-        } catch (e) {
+            }, 1500);
+        } else {
             setIsProcessing(false);
-            console.error(e);
+            alert("Error al registrar visita o límite alcanzado");
         }
     };
 
-    const renderActionContent = () => {
-        if (action === 'menu') {
-            return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
-                    <button onClick={() => setAction('register')} className="action-btn primary">✨ Registrar visita</button>
-                    <button onClick={() => setAction('modify')} className="action-btn secondary">✏️ Modificar última</button>
-                    <button onClick={() => setAction('remove')} className="action-btn danger">🗑️ Eliminar última</button>
-                    <button onClick={() => setScanResult(null)} style={{ background: 'transparent', color: '#666', border: 'none', marginTop: '10px' }}>Volver a escanear</button>
-                </div>
-            );
+    const handleDelete = async () => {
+        if (!scanResult) return;
+        if (!window.confirm("¿Estás seguro que deseas eliminar la última visita?")) return;
+
+        setIsProcessing(true);
+        const success = await removeLastVisit(scanResult);
+        if (success) {
+            setCurrentVisits(prev => (prev !== null ? Math.max(0, prev - 1) : 0));
+            alert("Visita eliminada");
+            setScanResult(null);
+        } else {
+            alert("Error al eliminar visita");
+        }
+        setIsProcessing(false);
+    };
+
+    const renderScanContent = () => {
+        if (isLoadingCard) {
+            return <div className="loading">Cargando datos de la tarjeta...</div>;
         }
 
         return (
-            <form
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    handleAction();
-                }}
-                className="success-message"
-                style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
-            >
-                <h3>{action === 'register' ? 'Nueva Visita' : action === 'modify' ? 'Modificar Última' : 'Confirmar Eliminación'}</h3>
+            <div className="action-menu" style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
+                <div className={`visit-status-card ${highlight ? 'highlight-update' : ''}`} style={{
+                    padding: '20px',
+                    background: highlight ? '#fef3c7' : '#f3f4f6',
+                    borderRadius: '12px',
+                    transition: 'all 0.3s ease'
+                }}>
+                    <h3 style={{ margin: 0 }}>Visitas: <span style={{ color: 'var(--card-bg)', fontSize: '1.5em' }}>{currentVisits ?? 0}</span> / 10</h3>
+                </div>
 
-                {action === 'modify' && (
-                    <>
-                        {isLoadingVisit && (
-                            <div style={{ color: '#666', fontStyle: 'italic', padding: '10px' }}>
-                                ⏳ Buscando último registro...
-                            </div>
-                        )}
-                        {!isLoadingVisit && lastVisit && (
-                            <div style={{ background: '#fef3c7', padding: '10px', borderRadius: '6px', fontSize: '0.9em', color: '#854d0e' }}>
-                                <div><strong>Último registro detectado:</strong></div>
-                                <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}>${lastVisit.amount.toLocaleString()}</div>
-                                <div>{new Date(lastVisit.date).toLocaleString()}</div>
-                            </div>
-                        )}
-                    </>
-                )}
+                <div style={{ display: 'grid', gap: '10px' }}>
+                    <button
+                        onClick={handleRegister}
+                        disabled={isProcessing || (currentVisits !== null && currentVisits >= 10)}
+                        className="action-btn primary"
+                        style={{ padding: '15px', fontSize: '1.1rem' }}
+                    >
+                        {isProcessing ? 'Procesando...' : '✨ Sellar Tarjeta'}
+                    </button>
 
-                {action !== 'remove' && (
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Valor ($):</label>
-                        <input
-                            type="number"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            placeholder="Ingrese monto (ej: 5000)"
-                            style={{ padding: '12px', width: '100%', fontSize: '16px', borderRadius: '8px', border: '1px solid #ccc' }}
-                            autoFocus
-                        />
-                    </div>
-                )}
+                    <button
+                        onClick={handleDelete}
+                        disabled={isProcessing || (currentVisits !== null && currentVisits <= 0)}
+                        className="action-btn danger"
+                        style={{ padding: '10px' }}
+                    >
+                        🗑️ Eliminar última
+                    </button>
+                </div>
 
-                {action === 'remove' && <p>¿Estás seguro que deseas eliminar la última visita registrada?</p>}
-
-                <button
-                    type="submit"
-                    disabled={(action !== 'remove' && !amount) || isProcessing}
-                    style={{ padding: '14px', background: action === 'remove' ? '#ef4444' : 'var(--card-bg)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
-                >
-                    {isProcessing ? 'Procesando...' : 'Confirmar'}
-                </button>
-                <button type="button" onClick={() => setAction('menu')} style={{ background: 'none', border: 'none', color: '#666' }}>Cancelar</button>
-            </form>
+                <button onClick={() => setScanResult(null)} style={{ background: 'transparent', color: '#666', border: 'none', marginTop: '10px' }}>Volver a escanear</button>
+            </div>
         );
     };
 
     return (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-            <h2>Escanear Código QR</h2>
+        <div style={{ padding: '20px', textAlign: 'center', maxWidth: '500px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: '#666' }}>← Salir</button>
+                <button onClick={() => navigate('/dashboard')} className="dashboard-link" style={{
+                    background: '#cd853f',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 15px',
+                    borderRadius: '20px',
+                    fontSize: '0.9rem'
+                }}>📊 Dashboard</button>
+            </div>
+
+            <h2>Scanner de Personal</h2>
+
             {scanResult ? (
-                renderActionContent()
+                renderScanContent()
             ) : (
-                <div id="reader" style={{ width: '100%', maxWidth: '500px', margin: '0 auto' }}></div>
+                <div id="reader" style={{ width: '100%' }}></div>
             )}
-            {!scanResult && (
-                <>
-                    <br />
-                    <button onClick={() => navigate('/')}>Cancelar / Volver</button>
-                </>
-            )}
-        </div>
+        </div >
     );
 };
+
 
 export default ScannerView;

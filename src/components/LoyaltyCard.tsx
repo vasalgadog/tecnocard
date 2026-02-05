@@ -4,7 +4,7 @@ import QRCode from 'react-qr-code';
 import InfoModal from './InfoModal';
 
 const LoyaltyCard = () => {
-    const { visits, user, visit_history } = useLoyalty();
+    const { visits, user, visits_history, isSyncing } = useLoyalty();
     const [showInfo, setShowInfo] = useState(false);
     const prevVisits = React.useRef(visits);
 
@@ -81,67 +81,37 @@ const LoyaltyCard = () => {
 
     // Memoize sorted history to ensure consistency and avoid re-sorting on every render/map call
     const sortedHistory = React.useMemo(() => {
-        if (!visit_history) return [];
-        return [...visit_history].sort((a, b) =>
+        if (!visits_history) return [];
+        return [...visits_history].sort((a, b) =>
             new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime()
         );
-    }, [visit_history]);
+    }, [visits_history]);
 
-    // Track previous history to detect amount updates
-    const prevHistoryRef = React.useRef<{ [id: string]: number }>({});
+    // Simplified state: highlights only for new visits (handled by visit count ref)
     const [highlightedVisitId, setHighlightedVisitId] = useState<string | null>(null);
 
-    // Initialize ref once
+    // Track new visits to highlight them
     useEffect(() => {
-        if (visit_history) {
-            const map: { [id: string]: number } = {};
-            visit_history.forEach(v => {
-                if (v.id) map[v.id] = v.amount_paid;
-            });
-            // Only set if empty (first mount)
-            if (Object.keys(prevHistoryRef.current).length === 0) {
-                prevHistoryRef.current = map;
+        if (visits > prevVisits.current && sortedHistory.length > 0) {
+            const lastRecord = sortedHistory[sortedHistory.length - 1];
+            if (lastRecord && lastRecord.id) {
+                setHighlightedVisitId(lastRecord.id);
+                setTimeout(() => setHighlightedVisitId(null), 2000);
             }
         }
-    }, []); // Run once on mount to capture initial state if needed, 
-    // BUT actually we want to update ref after checks.
+    }, [visits, sortedHistory]);
 
-    // Detect changes in amounts
-    useEffect(() => {
-        if (!visit_history) return;
 
-        const currentMap: { [id: string]: number } = {};
-        let changedId: string | null = null;
-
-        visit_history.forEach(v => {
-            if (v.id) {
-                currentMap[v.id] = v.amount_paid;
-                // Check if this ID existed and amount changed
-                const prevAmount = prevHistoryRef.current[v.id];
-                if (prevAmount !== undefined && prevAmount !== v.amount_paid) {
-                    changedId = v.id;
-                }
-            }
-        });
-
-        if (changedId) {
-            setHighlightedVisitId(changedId);
-            // Clear highlight after animation
-            setTimeout(() => setHighlightedVisitId(null), 2000);
-        }
-
-        // Update ref
-        prevHistoryRef.current = currentMap;
-    }, [visit_history]);
-
-    // Helper to get formatted date/amount
+    // Helper to get formatted date
     const getHistoryText = (idx: number) => {
         const record = sortedHistory[idx];
         if (!record) return '';
 
-        const date = new Date(record.scanned_at).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const amount = "$" + record.amount_paid.toLocaleString('es-CL');
-        return `${date} | ${amount}`;
+        return new Date(record.scanned_at).toLocaleDateString('es-CL', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
     };
 
     return (
@@ -150,7 +120,26 @@ const LoyaltyCard = () => {
                 <div className="card-header">
                     <div className="header-box">
                         <button onClick={() => setShowInfo(true)} className="info-btn" title="Ayuda">?</button>
-                        <img src="./img/logo.png" alt="Tecnopan Logo" className="logo" />
+                        <div style={{ position: 'relative' }}>
+                            <img src="./img/logo.png" alt="Tecnopan Logo" className="logo" />
+                            {isSyncing && (
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '-20px',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    whiteSpace: 'nowrap',
+                                    fontSize: '0.7rem',
+                                    color: '#666',
+                                    background: 'rgba(255,255,255,0.9)',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                }}>
+                                    ↻ Actualizando...
+                                </div>
+                            )}
+                        </div>
                         <div className="qr-box">
                             <div className="qr-white-bg">
                                 <QRCode
@@ -182,7 +171,7 @@ const LoyaltyCard = () => {
 
                             if (isMilestone) {
                                 return (
-                                    <div className={`step-item milestone ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''} ${highlightClass}`} key={step}>
+                                    <div className={`step-item milestone ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''} ${highlightClass}`} id={isCurrent ? "target-step" : ""} key={step}>
                                         {isCurrent && <div className="step-highlight"></div>}
                                         <div className="circle">{step === 5 ? '🎁' : '⭐'}</div>
                                         <div className="content">

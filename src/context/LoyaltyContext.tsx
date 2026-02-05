@@ -1,20 +1,33 @@
 import React, { createContext, useState, useEffect, type ReactNode } from 'react';
-import type { LoyaltyContextType, User } from '../types';
+import type { LoyaltyContextType, User, DashboardMetrics } from '../types';
 import { supabase } from '../supabase';
 
 export const LoyaltyContext = createContext<LoyaltyContextType | undefined>(undefined);
 
 export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
+    const DATA_VERSION = 'v3';
+    const [isSyncing, setIsSyncing] = useState(false);
+
     // Single consolidated user state
     const [user, setUser] = useState<User | null>(() => {
+        const storedVersion = localStorage.getItem('tecnocard_version');
+
+        // Version Check: Hard Reset if version mismatch
+        if (storedVersion !== DATA_VERSION) {
+            console.warn(`Data version mismatch (${storedVersion} vs ${DATA_VERSION}). Clearing cache.`);
+            localStorage.removeItem('tecnocard_user');
+            // specific keys related to app state
+            localStorage.removeItem('tecnocard_visits');
+            localStorage.removeItem('tecnocard_history');
+
+            localStorage.setItem('tecnocard_version', DATA_VERSION);
+            return null;
+        }
+
         const stored = localStorage.getItem('tecnocard_user');
         if (!stored) return null;
         try {
-            const data = JSON.parse(stored);
-            // Cleanup legacy keys if they exist
-            localStorage.removeItem('tecnocard_visits');
-            localStorage.removeItem('tecnocard_history');
-            return data;
+            return JSON.parse(stored);
         } catch {
             return null;
         }
@@ -22,7 +35,7 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
 
     // Derived states
     const visits = user?.visits ?? 0;
-    const visitHistory = user?.visit_history ?? [];
+    const visitHistory = user?.visits_history ?? [];
 
     // Persist user state
     useEffect(() => {
@@ -51,6 +64,7 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
     const fetchCardData = async () => {
         if (!user || !user.id) return;
 
+        setIsSyncing(true);
         try {
             const { data, error } = await supabase
                 .rpc('get_or_create_customer_card', {
@@ -70,68 +84,57 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
                 setUser(prev => prev ? {
                     ...prev,
                     visits: responseData.visits || 0,
-                    visit_history: responseData.visit_history || []
+                    visits_history: responseData.visits_history || []
                 } : null);
+            } else {
+                // Strict Sync: Backend returned success but NO data -> User deleted?
+                // Clear local state to reflect backend reality
+                console.warn("Backend returned empty card data. Clearing local user state.");
+                setUser(null);
             }
         } catch (e: any) {
             if (e.name !== 'AbortError' && !e.message?.includes('aborted')) {
                 console.error('Fetch card data exception:', e);
             }
+        } finally {
+            setIsSyncing(false);
         }
     };
 
+    // Validate session on mount to prevent stale data persistence
+    useEffect(() => {
+        // Only fetch if we have a user from localStorage but haven't validated it yet
+        if (user) {
+            fetchCardData();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Consolidated real-time subscription
     useEffect(() => {
-        if (!user || (!user.id && !user.card_id)) return;
+        if (!user?.card_id) return;
 
-        // Determine filter ID: Prioritize card_id if available, otherwise QR (user.id)
-        // Note: 'visits' table usually links via loyalty_card_id
-        const filterId = user.card_id || user.id;
-
-        console.log("Subscribing to realtime events for:", filterId);
-
-        const channel = supabase.channel(`loyalty-sync-${filterId}`);
-
-        // Listen to Loyalty Card updates (e.g. visits counter)
-        channel
+        const channel = supabase
+            .channel(`loyalty-sync-${user.card_id}`)
             .on(
                 'postgres_changes',
                 {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'loyalty_cards',
-                    filter: user.card_id ? `id=eq.${user.card_id}` : `qr_code=eq.${user.id}`,
-                },
-                (payload) => {
-                    console.log("Realtime: Loyalty Card update", payload);
-                    fetchCardData().catch(() => { });
-                }
-            )
-            // Listen to Visit updates (INSERT = new scan, UPDATE = modify amount)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*', // INSERT, UPDATE, DELETE
+                    event: '*',
                     schema: 'public',
                     table: 'visits',
-                    filter: user.card_id ? `loyalty_card_id=eq.${user.card_id}` : undefined,
+                    filter: `loyalty_card_id=eq.${user.card_id}`,
                 },
-                (payload) => {
-                    console.log("Realtime: Visit update", payload);
+                () => {
                     fetchCardData().catch(() => { });
                 }
             )
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                    console.log("Realtime connected");
-                }
-            });
+            .subscribe();
 
         return () => {
-            console.log("Unsubscribing realtime");
             supabase.removeChannel(channel);
         };
-    }, [user?.id, user?.card_id]); // Re-subscribe if identifiers change
+    }, [user?.card_id]);
+    // Re-subscribe if identifiers change
 
     const registerUser = async (rut: string) => {
         const id = generateUUID();
@@ -154,33 +157,30 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
             card_id: responseData?.card_id, // Ensure this is captured
             registeredAt: new Date().toISOString(),
             visits: responseData?.visits || 0,
-            visit_history: responseData?.visit_history || []
+            visits_history: responseData?.visits_history || []
         };
         setUser(newUser);
     };
 
-    const registerVisit = async (code: string, amount: number): Promise<boolean> => {
+    const registerVisit = async (code: string): Promise<boolean> => {
         const { data, error } = await supabase.rpc('register_visit', {
-            p_qr_code: code,
-            p_amount: amount
+            p_qr_code: code
         });
 
         if (error) {
             console.error('Error registering visit:', error);
+            // Handle specifically the 10 visits error if possible, but the RPC usually returns error message
             return false;
         }
 
-        // Authoritative update from RPC response
         const responseData = Array.isArray(data) ? data[0] : data;
         if (responseData) {
             setUser(prev => prev ? {
                 ...prev,
                 visits: responseData.visits ?? prev.visits,
-                visit_history: responseData.visit_history ?? prev.visit_history
+                visits_history: responseData.visits_history ?? prev.visits_history
             } : null);
-            // SUCCESS: Do NOT fetchCardData here, relying on authoritative data
         } else {
-            // Fallback if no data returned
             await fetchCardData();
         }
 
@@ -202,103 +202,44 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
             setUser(prev => prev ? {
                 ...prev,
                 visits: responseData.visits ?? 0,
-                visit_history: responseData.visit_history ?? []
+                visits_history: responseData.visits_history ?? []
             } : null);
-            // SUCCESS: Do NOT fetchCardData
         } else {
             await fetchCardData();
         }
         return true;
     };
 
-    const modifyLastVisit = async (code: string, newAmount: number): Promise<boolean> => {
-        const { data, error } = await supabase.rpc('update_last_visit', {
-            p_qr_code: code,
-            p_amount_paid: newAmount
-        });
+    const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
+        const { data, error } = await supabase.rpc('get_dashboard_stats');
 
         if (error) {
-            console.error('Error updating last visit:', error);
-            return false;
+            console.error('Error fetching dashboard stats:', error);
+            throw error;
         }
 
-        const responseData = Array.isArray(data) ? data[0] : data;
-
-        // Scenario 1: RPC returns the full User/Card state (has visit_history)
-        if (responseData && Array.isArray(responseData.visit_history)) {
-            setUser(prev => prev ? {
-                ...prev,
-                visits: responseData.visits ?? prev.visits,
-                visit_history: responseData.visit_history
-            } : null);
-            return true; // Return immediately, NO FETCH
-        }
-
-        // Scenario 2: RPC returns the single Updated Visit (has amount_paid)
-        if (responseData && typeof responseData.amount_paid === 'number') {
-            setUser(prev => {
-                if (!prev) return null;
-                const currentHistory = [...(prev.visit_history || [])];
-
-                // Attempt 1: Match by ID
-                if (responseData.id) {
-                    const idx = currentHistory.findIndex(v => v.id === responseData.id);
-                    if (idx !== -1) {
-                        currentHistory[idx] = { ...currentHistory[idx], amount_paid: responseData.amount_paid };
-                        return { ...prev, visit_history: currentHistory };
-                    }
-                }
-
-                // Attempt 2: Update the most recent visit
-                if (currentHistory.length > 0) {
-                    let latestIdx = 0;
-                    let latestTime = new Date(currentHistory[0].scanned_at).getTime();
-
-                    for (let i = 1; i < currentHistory.length; i++) {
-                        const t = new Date(currentHistory[i].scanned_at).getTime();
-                        if (t > latestTime) {
-                            latestTime = t;
-                            latestIdx = i;
-                        }
-                    }
-
-                    currentHistory[latestIdx] = {
-                        ...currentHistory[latestIdx],
-                        amount_paid: responseData.amount_paid
-                    };
-                    return { ...prev, visit_history: currentHistory };
-                }
-
-                return prev;
-            });
-
-            // SUCCESS (Best Effort): We updated local state.
-            // Do NOT fetchCardData if we are confident we updated it.
-            // If we had a valid responseData, we assume success.
-            return true;
-        }
-
-        // Scenario 3: Unknown or Null response -> Fallback
-        await fetchCardData();
-        return true;
+        return data as DashboardMetrics;
     };
 
     const resetProgress = () => {
-        setUser(prev => prev ? { ...prev, visits: 0, visit_history: [] } : null);
+        setUser(prev => prev ? { ...prev, visits: 0, visits_history: [] } : null);
     };
 
     return (
         <LoyaltyContext.Provider value={{
             user,
             visits,
-            visit_history: visitHistory,
+            visits_history: visitHistory,
             registerUser,
             registerVisit,
             removeLastVisit,
-            modifyLastVisit,
+            fetchCardData,
+            fetchDashboardMetrics,
+            isSyncing,
             resetProgress
         }}>
             {children}
         </LoyaltyContext.Provider>
     );
 };
+
