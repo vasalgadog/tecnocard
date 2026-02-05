@@ -82,6 +82,7 @@ const ScannerView = () => {
         if (success) {
             setHighlight(true);
             setCurrentVisits(prev => (prev !== null ? prev + 1 : 1));
+            alert("Visita registrada con éxito");
             setTimeout(() => {
                 setHighlight(false);
                 setScanResult(null);

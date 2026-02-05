@@ -2,6 +2,8 @@ import React, { createContext, useState, useEffect, type ReactNode } from 'react
 import type { LoyaltyContextType, User, DashboardMetrics } from '../types';
 import { supabase } from '../supabase';
 
+import { generateUUID } from '../utils/helpers';
+
 export const LoyaltyContext = createContext<LoyaltyContextType | undefined>(undefined);
 
 export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
@@ -45,21 +47,6 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
             localStorage.removeItem('tecnocard_user');
         }
     }, [user]);
-
-    // Helper for UUID generation with fallback
-    const generateUUID = () => {
-        try {
-            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-                return crypto.randomUUID();
-            }
-        } catch (e) { /* fallback */ }
-
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    };
 
     const fetchCardData = async () => {
         if (!user || !user.id) return;

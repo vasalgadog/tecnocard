@@ -35,7 +35,18 @@ function App() {
         <LoyaltyProvider>
             <Router basename="/tecnocard/">
                 <AuthGuard>
-                    <React.Suspense fallback={<div style={{ padding: '20px', textAlign: 'center' }}>Cargando...</div>}>
+                    <React.Suspense fallback={
+                        <div style={{
+                            padding: '20px',
+                            textAlign: 'center',
+                            minHeight: '670px', // Reserve height for LoyaltyCard to prevent CLS
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            Cargando...
+                        </div>
+                    }>
                         <Routes>
                             <Route path="/" element={<HomeView />} />
                             <Route path="/tecnoscan" element={<ScannerView />} />

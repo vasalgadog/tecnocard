@@ -4,7 +4,7 @@ import QRCode from 'react-qr-code';
 import InfoModal from './InfoModal';
 
 const LoyaltyCard = () => {
-    const { visits, user, visits_history, isSyncing } = useLoyalty();
+    const { visits, user, visits_history } = useLoyalty();
     const [showInfo, setShowInfo] = useState(false);
     const prevVisits = React.useRef(visits);
 
@@ -122,23 +122,6 @@ const LoyaltyCard = () => {
                         <button onClick={() => setShowInfo(true)} className="info-btn" title="Ayuda">?</button>
                         <div style={{ position: 'relative' }}>
                             <img src="./img/logo.png" alt="Tecnopan Logo" className="logo" />
-                            {isSyncing && (
-                                <div style={{
-                                    position: 'absolute',
-                                    bottom: '-20px',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    whiteSpace: 'nowrap',
-                                    fontSize: '0.7rem',
-                                    color: '#666',
-                                    background: 'rgba(255,255,255,0.9)',
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                                }}>
-                                    ↻ Actualizando...
-                                </div>
-                            )}
                         </div>
                         <div className="qr-box">
                             <div className="qr-white-bg">
