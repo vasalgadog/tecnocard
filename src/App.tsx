@@ -7,6 +7,7 @@ import { useLoyalty } from './hooks/useLoyalty';
 const HomeView = React.lazy(() => import('./views/HomeView'));
 const ScannerView = React.lazy(() => import('./views/ScannerView'));
 const RegisterView = React.lazy(() => import('./views/RegisterView'));
+const DashboardView = React.lazy(() => import('./views/DashboardView'));
 
 // Component to handle redirection if not logged in
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
@@ -15,7 +16,10 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     const location = useLocation();
 
     useEffect(() => {
-        if (!user && location.pathname !== '/register' && location.pathname !== '/tecnoscan') {
+        // Paths that don't require "user" (customer session)
+        const isPublicPath = ['/register', '/tecnoscan', '/dashboard'].includes(location.pathname);
+
+        if (!user && !isPublicPath) {
             navigate('/register');
         } else if (user && location.pathname === '/register') {
             // If already logged in, go to card
@@ -31,11 +35,23 @@ function App() {
         <LoyaltyProvider>
             <Router basename="/tecnocard/">
                 <AuthGuard>
-                    <React.Suspense fallback={<div style={{ padding: '20px', textAlign: 'center' }}>Cargando...</div>}>
+                    <React.Suspense fallback={
+                        <div style={{
+                            padding: '20px',
+                            textAlign: 'center',
+                            minHeight: '670px', // Reserve height for LoyaltyCard to prevent CLS
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            Cargando...
+                        </div>
+                    }>
                         <Routes>
                             <Route path="/" element={<HomeView />} />
                             <Route path="/tecnoscan" element={<ScannerView />} />
                             <Route path="/register" element={<RegisterView />} />
+                            <Route path="/dashboard" element={<DashboardView />} />
                         </Routes>
                     </React.Suspense>
                 </AuthGuard>
@@ -43,5 +59,6 @@ function App() {
         </LoyaltyProvider>
     );
 }
+
 
 export default App;
