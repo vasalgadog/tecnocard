@@ -8,7 +8,7 @@ import { generateUUID } from '../utils/helpers';
 export const LoyaltyContext = createContext<LoyaltyContextType | undefined>(undefined);
 
 export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
-    const DATA_VERSION = 'v5';
+    const DATA_VERSION = 'v6';
     const [isSyncing, setIsSyncing] = useState(false);
     const navigate = useNavigate();
 

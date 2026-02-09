@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useLoyalty } from '../hooks/useLoyalty';
 
 import { supabase } from '../supabase';
@@ -11,8 +11,21 @@ const ScannerView = () => {
     const [currentVisits, setCurrentVisits] = useState<number | null>(null);
     const [isLoadingCard, setIsLoadingCard] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
     const { registerVisit, removeLastVisit } = useLoyalty();
     const [highlight, setHighlight] = useState(false);
+
+    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+
+    // Check for resolved QR code from RUT search
+    useEffect(() => {
+        const state = location.state as { resolvedQrCode?: string } | null;
+        if (state?.resolvedQrCode) {
+            setScanResult(state.resolvedQrCode);
+            // Clear the state to prevent re-triggering
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location, navigate]);
 
     // Fetch card status on scan
     useEffect(() => {
@@ -37,28 +50,34 @@ const ScannerView = () => {
         }
     }, [scanResult]);
 
+    // Scanner lifecycle - mount on entry, unmount on exit
     useEffect(() => {
-        if (scanResult) return;
-        setCurrentVisits(null);
+        // Don't initialize scanner if we already have a scan result
+        if (scanResult) {
+            setCurrentVisits(null);
+            return;
+        }
 
-        let scanner: Html5QrcodeScanner | null = null;
+        // Initialize scanner
         let timer: ReturnType<typeof setTimeout>;
 
         timer = setTimeout(() => {
-            if (!document.getElementById("reader") || scanResult) return;
+            const readerElement = document.getElementById("reader");
+            if (!readerElement || scannerRef.current) return;
 
-            scanner = new Html5QrcodeScanner(
+            scannerRef.current = new Html5QrcodeScanner(
                 "reader",
                 { fps: 10, qrbox: 250, aspectRatio: 1.777778, supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA], showTorchButtonIfSupported: true },
                 false
             );
 
-            scanner.render(onScanSuccess, onScanFailure);
+            scannerRef.current.render(onScanSuccess, onScanFailure);
         }, 100);
 
         function onScanSuccess(decodedText: string) {
-            if (scanner) {
-                scanner.clear().catch(() => { });
+            if (scannerRef.current) {
+                scannerRef.current.clear().catch(() => { });
+                scannerRef.current = null;
             }
             setScanResult(decodedText);
         }
@@ -67,13 +86,18 @@ const ScannerView = () => {
 
         return () => {
             clearTimeout(timer);
-            if (scanner) {
+            if (scannerRef.current) {
                 try {
-                    scanner.clear().catch(() => { });
+                    scannerRef.current.clear().catch(() => { });
                 } catch (e) { /* ignore */ }
+                scannerRef.current = null;
             }
         };
     }, [scanResult]);
+
+    const resetScanner = () => {
+        setScanResult(null);
+    };
 
     const handleRegister = async () => {
         if (!scanResult) return;
@@ -85,7 +109,7 @@ const ScannerView = () => {
             alert("Visita registrada con éxito");
             setTimeout(() => {
                 setHighlight(false);
-                setScanResult(null);
+                resetScanner();
                 setIsProcessing(false);
             }, 1500);
         } else {
@@ -103,7 +127,7 @@ const ScannerView = () => {
         if (success) {
             setCurrentVisits(prev => (prev !== null ? Math.max(0, prev - 1) : 0));
             alert("Visita eliminada");
-            setScanResult(null);
+            // Don't auto-close on delete, user might want to verify
         } else {
             alert("Error al eliminar visita");
         }
@@ -146,33 +170,77 @@ const ScannerView = () => {
                     </button>
                 </div>
 
-                <button onClick={() => setScanResult(null)} style={{ background: 'transparent', color: '#666', border: 'none', marginTop: '10px' }}>Volver a escanear</button>
+                <button onClick={resetScanner} style={{ background: 'transparent', color: '#666', border: 'none', marginTop: '10px' }}>Volver a escanear</button>
             </div>
         );
     };
 
+
     return (
-        <div style={{ padding: '20px', textAlign: 'center', maxWidth: '500px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: '#666' }}>← Salir</button>
-                <button onClick={() => navigate('/dashboard')} className="dashboard-link" style={{
-                    background: '#cd853f',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 15px',
-                    borderRadius: '20px',
-                    fontSize: '0.9rem'
-                }}>📊 Dashboard</button>
+        <div style={{
+            background: '#e5e7eb',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            padding: '20px 0'
+        }}>
+            <div style={{
+                width: '100%',
+                maxWidth: '340px',
+                background: 'white',
+                borderRadius: '20px',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+                overflow: 'hidden'
+            }}>
+                {/* Topbar */}
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '15px 20px',
+                    borderBottom: '1px solid #f0f0f0'
+                }}>
+                    {scanResult ? (
+                        <button onClick={resetScanner} className="nav-link-btn">← Volver al scanner</button>
+                    ) : (
+                        <button onClick={() => navigate('/')} className="nav-link-btn">← Salir</button>
+                    )}
+
+                    {!scanResult && (
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            <button onClick={() => navigate('/tecnoscan/con-rut')} className="scan-mode-btn">
+                                ⌨️ Con RUT
+                            </button>
+                            <button onClick={() => navigate('/dashboard')} style={{
+                                background: '#cd853f',
+                                color: 'white',
+                                border: 'none',
+                                padding: '6px 12px',
+                                borderRadius: '20px',
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                                fontWeight: '600'
+                            }}>
+                                📊 Dashboard
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Content */}
+                <div style={{ padding: '20px', textAlign: 'center', height: '450px' }}>
+                    <h2 style={{ margin: '0 0 20px 0', fontSize: '1.5rem' }}>
+                        {scanResult ? 'Gestionar Visitas' : 'Escanear tarjeta'}
+                    </h2>
+
+                    {scanResult ? (
+                        renderScanContent()
+                    ) : (
+                        <div id="reader" style={{ width: '100%' }}></div>
+                    )}
+                </div>
             </div>
-
-            <h2>Escanear tarjeta</h2>
-
-            {scanResult ? (
-                renderScanContent()
-            ) : (
-                <div id="reader" style={{ width: '100%' }}></div>
-            )}
-        </div >
+        </div>
     );
 };
 

@@ -6,9 +6,13 @@ import { useLoyalty } from './hooks/useLoyalty';
 // Lazy load views for better chunking
 const HomeView = React.lazy(() => import('./views/HomeView'));
 const ScannerView = React.lazy(() => import('./views/ScannerView'));
+const RutSearchView = React.lazy(() => import('./views/RutSearchView'));
 const RegisterView = React.lazy(() => import('./views/RegisterView'));
 const DashboardView = React.lazy(() => import('./views/DashboardView'));
 const LocalAccessView = React.lazy(() => import('./views/LocalAccessView'));
+
+// Import route guard
+import ScannerProtectedRoute from './components/ScannerProtectedRoute';
 
 // Component to handle redirection if not logged in
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
@@ -18,7 +22,8 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         // Paths that don't require "user" (customer session)
-        const isPublicPath = ['/register', '/tecnoscan', '/dashboard'].includes(location.pathname) || location.pathname.startsWith('/local/');
+        // Scanner routes are handled by ScannerProtectedRoute
+        const isPublicPath = ['/register', '/tecnoscan', '/tecnoscan/con-rut', '/dashboard'].includes(location.pathname) || location.pathname.startsWith('/local/');
 
         if (!user && !isPublicPath) {
             navigate('/register');
@@ -50,9 +55,22 @@ function App() {
                     }>
                         <Routes>
                             <Route path="/" element={<HomeView />} />
-                            <Route path="/tecnoscan" element={<ScannerView />} />
+                            <Route path="/tecnoscan" element={
+                                <ScannerProtectedRoute>
+                                    <ScannerView />
+                                </ScannerProtectedRoute>
+                            } />
+                            <Route path="/tecnoscan/con-rut" element={
+                                <ScannerProtectedRoute>
+                                    <RutSearchView />
+                                </ScannerProtectedRoute>
+                            } />
                             <Route path="/register" element={<RegisterView />} />
-                            <Route path="/dashboard" element={<DashboardView />} />
+                            <Route path="/dashboard" element={
+                                <ScannerProtectedRoute>
+                                    <DashboardView />
+                                </ScannerProtectedRoute>
+                            } />
                             <Route path="/local/:localToken" element={<LocalAccessView />} />
                         </Routes>
                     </React.Suspense>
