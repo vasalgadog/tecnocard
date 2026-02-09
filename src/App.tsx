@@ -8,6 +8,7 @@ const HomeView = React.lazy(() => import('./views/HomeView'));
 const ScannerView = React.lazy(() => import('./views/ScannerView'));
 const RegisterView = React.lazy(() => import('./views/RegisterView'));
 const DashboardView = React.lazy(() => import('./views/DashboardView'));
+const LocalAccessView = React.lazy(() => import('./views/LocalAccessView'));
 
 // Component to handle redirection if not logged in
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
@@ -17,7 +18,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         // Paths that don't require "user" (customer session)
-        const isPublicPath = ['/register', '/tecnoscan', '/dashboard'].includes(location.pathname);
+        const isPublicPath = ['/register', '/tecnoscan', '/dashboard'].includes(location.pathname) || location.pathname.startsWith('/local/');
 
         if (!user && !isPublicPath) {
             navigate('/register');
@@ -52,6 +53,7 @@ function App() {
                             <Route path="/tecnoscan" element={<ScannerView />} />
                             <Route path="/register" element={<RegisterView />} />
                             <Route path="/dashboard" element={<DashboardView />} />
+                            <Route path="/local/:localToken" element={<LocalAccessView />} />
                         </Routes>
                     </React.Suspense>
                 </AuthGuard>

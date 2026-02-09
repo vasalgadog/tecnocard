@@ -10,22 +10,7 @@ export const LoyaltyContext = createContext<LoyaltyContextType | undefined>(unde
 export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
     const DATA_VERSION = 'v5';
     const [isSyncing, setIsSyncing] = useState(false);
-    const [localToken, setLocalToken] = useState<string | null>(null);
     const navigate = useNavigate();
-
-    // Capture localToken from URL on mount
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search);
-            const token = params.get('localToken');
-            if (token) {
-                // Save token
-                setLocalToken(token);
-                // Clean URL using navigate replace to avoid history stack buildup
-                navigate('/register', { replace: true });
-            }
-        }
-    }, [navigate]);
 
     // Single consolidated user state
     const [user, setUser] = useState<User | null>(() => {
@@ -143,14 +128,23 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
     const registerUser = async (rut: string) => {
         const id = generateUUID();
 
+        // Check for localToken in storage (set by LocalAccessView)
+        // Only usage allowed: New card creation (if user not exists logic is handled by UI/AuthGuard mostly, but here we enforce usage)
+        const storedLocalToken = localStorage.getItem('tecnocard_local_token');
+
         const { data, error } = await supabase
             .rpc('get_or_create_customer_card', {
                 p_qr_code: id,
                 p_rut: rut,
-                p_local_token: localToken || null
+                p_local_token: storedLocalToken || null
             });
 
         if (error) throw error;
+
+        // Clean up token after successful use
+        if (storedLocalToken) {
+            localStorage.removeItem('tecnocard_local_token');
+        }
 
         const responseData = Array.isArray(data) ? data[0] : data;
 
