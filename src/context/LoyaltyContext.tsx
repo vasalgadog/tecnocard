@@ -8,7 +8,7 @@ import { generateUUID } from '../utils/helpers';
 export const LoyaltyContext = createContext<LoyaltyContextType | undefined>(undefined);
 
 export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
-    const DATA_VERSION = 'v4';
+    const DATA_VERSION = 'v5';
     const [isSyncing, setIsSyncing] = useState(false);
     const [localToken, setLocalToken] = useState<string | null>(null);
     const navigate = useNavigate();
@@ -230,6 +230,14 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
         setUser(prev => prev ? { ...prev, visits: 0, visits_history: [] } : null);
     };
 
+    const logout = () => {
+        setUser(null);
+        localStorage.removeItem('tecnocard_user');
+        localStorage.removeItem('tecnocard_visits'); // Clean legacy if any
+        localStorage.removeItem('tecnocard_history'); // Clean legacy if any
+        navigate('/register');
+    };
+
     return (
         <LoyaltyContext.Provider value={{
             user,
@@ -241,7 +249,8 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
             fetchCardData,
             fetchDashboardMetrics,
             isSyncing,
-            resetProgress
+            resetProgress,
+            logout
         }}>
             {children}
         </LoyaltyContext.Provider>
