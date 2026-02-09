@@ -20,6 +20,7 @@ const RegisterView = () => {
 
         const newCount = logoClicks + 1;
         if (newCount >= 8) {
+            localStorage.setItem('scanner_user', 'true');
             navigate('/tecnoscan');
         } else {
             setLogoClicks(newCount);
