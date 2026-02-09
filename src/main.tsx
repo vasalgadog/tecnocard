@@ -14,13 +14,8 @@ registerSW({
     },
 });
 
-// Force reload when new service worker takes control
-let refreshing = false;
-navigator.serviceWorker?.addEventListener('controllerchange', () => {
-    if (refreshing) return;
-    refreshing = true;
-    window.location.reload();
-});
+// Force reload removed to prevent re-initialization on first visit
+// Updates will be applied on next visit or via user action if we add a toast later.
 
 ReactDOM.createRoot(document.getElementById('app')!).render(
     <React.StrictMode>
