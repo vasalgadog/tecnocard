@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, type ReactNode } from 'react
 import type { LoyaltyContextType, User, DashboardMetrics } from '../types';
 import { supabase } from '../supabase';
 
+import { useNavigate } from 'react-router-dom';
 import { generateUUID } from '../utils/helpers';
 
 export const LoyaltyContext = createContext<LoyaltyContextType | undefined>(undefined);
@@ -9,6 +10,22 @@ export const LoyaltyContext = createContext<LoyaltyContextType | undefined>(unde
 export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
     const DATA_VERSION = 'v4';
     const [isSyncing, setIsSyncing] = useState(false);
+    const [localToken, setLocalToken] = useState<string | null>(null);
+    const navigate = useNavigate();
+
+    // Capture localToken from URL on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('localToken');
+            if (token) {
+                // Save token
+                setLocalToken(token);
+                // Clean URL using navigate replace to avoid history stack buildup
+                navigate('/register', { replace: true });
+            }
+        }
+    }, [navigate]);
 
     // Single consolidated user state
     const [user, setUser] = useState<User | null>(() => {
@@ -129,7 +146,8 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
         const { data, error } = await supabase
             .rpc('get_or_create_customer_card', {
                 p_qr_code: id,
-                p_rut: rut
+                p_rut: rut,
+                p_local_token: localToken || null
             });
 
         if (error) throw error;

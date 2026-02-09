@@ -32,8 +32,8 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
     return (
-        <LoyaltyProvider>
-            <Router basename="/tecnocard/">
+        <Router basename="/tecnocard/">
+            <LoyaltyProvider>
                 <AuthGuard>
                     <React.Suspense fallback={
                         <div style={{
@@ -55,8 +55,8 @@ function App() {
                         </Routes>
                     </React.Suspense>
                 </AuthGuard>
-            </Router>
-        </LoyaltyProvider>
+            </LoyaltyProvider>
+        </Router>
     );
 }
 
