@@ -1,10 +1,19 @@
 import React from 'react';
+import { useLoyalty } from '../hooks/useLoyalty';
 
 interface InfoModalProps {
     onClose: () => void;
 }
 
 const InfoModal = ({ onClose }: InfoModalProps) => {
+    const { logout, user } = useLoyalty();
+
+    const handleLogout = () => {
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+            logout();
+            onClose();
+        }
+    };
     return (
         <div className="modal-overlay">
             <div className="modal-content">
@@ -15,7 +24,24 @@ const InfoModal = ({ onClose }: InfoModalProps) => {
                 <p>En tu visita número 5, tendrás un <b>descuento del 15% en el total de tu boleta</b>.</p>
                 <p>En tu visita número 10, tendrás un <b>descuento del 25% en el total de tu boleta</b>.</p>
                 <button onClick={onClose} className="close-btn">Entendido</button>
-                <br /><br />
+                {user && (
+                    <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                        <button
+                            onClick={handleLogout}
+                            style={{
+                                background: 'transparent',
+                                color: '#999',
+                                border: '1px solid #ddd',
+                                borderRadius: '20px',
+                                padding: '8px 16px',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Cerrar Sesión
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

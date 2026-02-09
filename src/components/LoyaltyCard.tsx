@@ -37,27 +37,41 @@ const LoyaltyCard = () => {
 
     useEffect(() => {
         // Only trigger if visits count INCREASED
-        if (visits > prevVisits.current) {
-            // Milestone alerts
-            if (visits === 5) {
-                alert('¡Felicidades! Has completado 5 visitas. ¡Disfruta tu 15% OFF!');
-            } else if (visits === 10) {
-                alert('¡Increíble! Has completado 10 visitas. ¡Reclama tu 25% OFF!');
-            }
+        const currentVisits = Number(visits);
+        const previousVisits = Number(prevVisits.current);
+
+        if (currentVisits > previousVisits) {
+            // Milestone alerts (wrapped in setTimeout to avoid blocking render/notifications)
+            setTimeout(() => {
+                switch (currentVisits) {
+                    case 4:
+                        alert('¡Ánimo! Tu próxima visita incluye un 15% OFF.');
+                        break;
+                    case 5:
+                        alert('¡Felicidades! Has completado 5 visitas. ¡Disfruta tu 15% OFF!');
+                        break;
+                    case 9:
+                        alert('¡Ya casi! Tu próxima visita incluye un 25% OFF.');
+                        break;
+                    case 10:
+                        alert('¡Increíble! Has completado 10 visitas. ¡Reclama tu 25% OFF!');
+                        break;
+                }
+            }, 100);
 
             // Web Notifications (PWA compatible)
             try {
                 const WinNotif = (window as any).Notification;
                 if ('serviceWorker' in navigator && WinNotif && WinNotif.permission === 'granted') {
-                    let body = `¡Visita #${visits} registrada!`;
+                    let body = `¡Visita #${currentVisits} registrada!`;
 
-                    if (visits === 4) {
+                    if (currentVisits === 4) {
                         body += ' ¡Tu próxima visita incluye un 15% OFF!';
-                    } else if (visits === 5) {
+                    } else if (currentVisits === 5) {
                         body = '¡Has ganado 15% OFF en tu compra!';
-                    } else if (visits === 9) {
+                    } else if (currentVisits === 9) {
                         body += ' ¡Tu próxima visita incluye un 25% OFF!';
-                    } else if (visits === 10) {
+                    } else if (currentVisits === 10) {
                         body = '¡Has ganado 25% OFF! ¡Gracias por tu preferencia!';
                     }
 

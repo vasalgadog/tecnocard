@@ -2,13 +2,30 @@ import React, { createContext, useState, useEffect, type ReactNode } from 'react
 import type { LoyaltyContextType, User, DashboardMetrics } from '../types';
 import { supabase } from '../supabase';
 
+import { useNavigate } from 'react-router-dom';
 import { generateUUID } from '../utils/helpers';
 
 export const LoyaltyContext = createContext<LoyaltyContextType | undefined>(undefined);
 
 export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
-    const DATA_VERSION = 'v4';
+    const DATA_VERSION = 'v5';
     const [isSyncing, setIsSyncing] = useState(false);
+    const [localToken, setLocalToken] = useState<string | null>(null);
+    const navigate = useNavigate();
+
+    // Capture localToken from URL on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('localToken');
+            if (token) {
+                // Save token
+                setLocalToken(token);
+                // Clean URL using navigate replace to avoid history stack buildup
+                navigate('/register', { replace: true });
+            }
+        }
+    }, [navigate]);
 
     // Single consolidated user state
     const [user, setUser] = useState<User | null>(() => {
@@ -129,7 +146,8 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
         const { data, error } = await supabase
             .rpc('get_or_create_customer_card', {
                 p_qr_code: id,
-                p_rut: rut
+                p_rut: rut,
+                p_local_token: localToken || null
             });
 
         if (error) throw error;
@@ -212,6 +230,14 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
         setUser(prev => prev ? { ...prev, visits: 0, visits_history: [] } : null);
     };
 
+    const logout = () => {
+        setUser(null);
+        localStorage.removeItem('tecnocard_user');
+        localStorage.removeItem('tecnocard_visits'); // Clean legacy if any
+        localStorage.removeItem('tecnocard_history'); // Clean legacy if any
+        navigate('/register');
+    };
+
     return (
         <LoyaltyContext.Provider value={{
             user,
@@ -223,7 +249,8 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
             fetchCardData,
             fetchDashboardMetrics,
             isSyncing,
-            resetProgress
+            resetProgress,
+            logout
         }}>
             {children}
         </LoyaltyContext.Provider>

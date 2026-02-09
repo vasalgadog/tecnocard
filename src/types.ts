@@ -41,6 +41,7 @@ export interface LoyaltyContextType extends LoyaltyState {
     fetchCardData: () => Promise<void>;
     fetchDashboardMetrics: () => Promise<DashboardMetrics>;
     resetProgress: () => void;
+    logout: () => void;
     isSyncing?: boolean;
 }
 
