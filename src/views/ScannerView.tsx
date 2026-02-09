@@ -228,7 +228,7 @@ const ScannerView = () => {
                 </div>
 
                 {/* Content */}
-                <div style={{ padding: '20px', textAlign: 'center', height: '450px' }}>
+                <div style={{ padding: '20px', textAlign: 'center', height: '100%' }}>
                     <h2 style={{ margin: '0 0 20px 0', fontSize: '1.5rem' }}>
                         {scanResult ? 'Gestionar Visitas' : 'Escanear tarjeta'}
                     </h2>
