@@ -9,11 +9,12 @@ const LocalAccessView = () => {
 
     useEffect(() => {
         if (localToken) {
-            // Persist token to local storage for registration flow
+            // Persist token to local storage with the requested 'local_uuid' key
+            localStorage.setItem('local_uuid', localToken);
+            // Keep the legacy key 'tecnocard_local_token' for compatibility
             localStorage.setItem('tecnocard_local_token', localToken);
 
-            // Initial redirect to register view
-            // Using replace to avoid history stack issues
+            // Redirect immediately to register view (resolves to /tecnocard/register under basename)
             navigate('/register', { replace: true });
         } else {
             // Fallback if no token provided in URL

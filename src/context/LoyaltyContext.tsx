@@ -130,7 +130,7 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
 
         // Check for localToken in storage (set by LocalAccessView)
         // Only usage allowed: New card creation (if user not exists logic is handled by UI/AuthGuard mostly, but here we enforce usage)
-        const storedLocalToken = localStorage.getItem('tecnocard_local_token');
+        const storedLocalToken = localStorage.getItem('local_uuid') || localStorage.getItem('tecnocard_local_token');
 
         const { data, error } = await supabase
             .rpc('get_or_create_customer_card', {
@@ -142,9 +142,8 @@ export const LoyaltyProvider = ({ children }: { children: ReactNode }) => {
         if (error) throw error;
 
         // Clean up token after successful use
-        if (storedLocalToken) {
-            localStorage.removeItem('tecnocard_local_token');
-        }
+        localStorage.removeItem('local_uuid');
+        localStorage.removeItem('tecnocard_local_token');
 
         const responseData = Array.isArray(data) ? data[0] : data;
 

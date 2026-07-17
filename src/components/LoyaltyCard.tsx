@@ -7,6 +7,58 @@ const LoyaltyCard = () => {
     const { visits, user, visits_history } = useLoyalty();
     const [showInfo, setShowInfo] = useState(false);
     const prevVisits = React.useRef(visits);
+    const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
+    const qrRef = React.useRef<HTMLDivElement>(null);
+
+    // Convert SVG QR code to a PNG Data URL to prevent forced dark mode color inversion
+    useEffect(() => {
+        const convertSvgToPng = () => {
+            const svgEl = qrRef.current?.querySelector('svg');
+            if (!svgEl) return;
+
+            try {
+                const svgString = new XMLSerializer().serializeToString(svgEl);
+                const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(svgBlob);
+
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const scale = 4; // Use scale to keep the image sharp
+                    const size = 150 * scale;
+                    const padding = 6 * scale; // Quiet zone margin to ensure readability
+                    const qrSize = size - (padding * 2);
+
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, size, size);
+                        ctx.drawImage(img, padding, padding, qrSize, qrSize);
+                        try {
+                            const pngUrl = canvas.toDataURL('image/png');
+                            setQrImageUrl(pngUrl);
+                        } catch (err) {
+                            console.error("Failed to generate PNG from QR code SVG", err);
+                        }
+                    }
+                    URL.revokeObjectURL(url);
+                };
+                img.onerror = (err) => {
+                    console.error("Image load error during QR conversion", err);
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
+            } catch (e) {
+                console.error("Error serializing SVG or generating blob", e);
+            }
+        };
+
+        // Small delay to ensure the SVG template is fully rendered in the DOM
+        const timer = setTimeout(convertSvgToPng, 150);
+        return () => clearTimeout(timer);
+    }, [user?.id]);
 
     // Initialize ref on mount to current visits to avoid invalid "new visit" detection
     useEffect(() => {
@@ -139,12 +191,17 @@ const LoyaltyCard = () => {
                         </div>
                         <div className="qr-box">
                             <div className="qr-white-bg">
-                                <QRCode
-                                    value={user ? user.id : 'DEMO'}
-                                    size={90}
-                                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                                    viewBox={`0 0 256 256`}
-                                />
+                                {qrImageUrl ? (
+                                    <img
+                                        src={qrImageUrl}
+                                        alt="QR Code"
+                                        style={{ width: "90px", height: "90px", display: "block" }}
+                                    />
+                                ) : (
+                                    <div style={{ width: "90px", height: "90px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", fontSize: "10px" }}>
+                                        Cargando...
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -205,6 +262,15 @@ const LoyaltyCard = () => {
                 </div>
 
                 {showInfo && <InfoModal onClose={() => setShowInfo(false)} />}
+            </div>
+
+            {/* Hidden offscreen QR Code template used to generate the PNG image */}
+            <div ref={qrRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden' }} aria-hidden="true">
+                <QRCode
+                    value={user ? user.id : 'DEMO'}
+                    size={90}
+                    viewBox="0 0 256 256"
+                />
             </div>
         </>
     );
