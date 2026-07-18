@@ -37,20 +37,29 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <>{children}</>;
 };
 
+interface BeforeInstallPromptEvent extends Event {
+    readonly platforms: string[];
+    readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+    prompt(): Promise<void>;
+}
+
 function App() {
-    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [showInstallBtn, setShowInstallBtn] = useState(false);
 
     useEffect(() => {
         const handleBeforeInstallPrompt = (e: Event) => {
+            // Prevenir que el navegador muestre su banner por defecto
             e.preventDefault();
-            setDeferredPrompt(e);
+            // Guardamos el evento con el tipado correcto
+            setDeferredPrompt(e as BeforeInstallPromptEvent);
             setShowInstallBtn(true);
         };
 
         const handleAppInstalled = () => {
             setDeferredPrompt(null);
             setShowInstallBtn(false);
+            console.log('Tecnocard se instaló con éxito');
         };
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -62,12 +71,25 @@ function App() {
         };
     }, []);
 
-    const handleInstallClick = async () => {
+    const handleInstallClick = () => {
         if (!deferredPrompt) return;
+
+        // Ejecución SÍNCRONA e inmediata del prompt nativo
         deferredPrompt.prompt();
-        await deferredPrompt.userChoice;
-        setDeferredPrompt(null);
-        setShowInstallBtn(false);
+
+        // Manejamos la promesa de la elección del usuario DESPUÉS de lanzar el prompt
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('El usuario aceptó la instalación');
+            } else {
+                console.log('El usuario rechazó la instalación');
+            }
+            // Limpiamos el estado en ambos casos
+            setDeferredPrompt(null);
+            setShowInstallBtn(false);
+        }).catch((err) => {
+            console.error('Error al procesar la instalación:', err);
+        });
     };
 
     return (
