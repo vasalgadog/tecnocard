@@ -20,8 +20,5 @@ registerSW({
 ReactDOM.createRoot(document.getElementById('app')!).render(
     <React.StrictMode>
         <App />
-        Instala la app para acceder más rápido!<br />
-        <install installurl="/tecnocard/"></install>
-        <footer>© 2026 <a href="https://valentin.valra.cl" target="_blank">valentin.valra.cl</a></footer>
     </React.StrictMode>,
 )

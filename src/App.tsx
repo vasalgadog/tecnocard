@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom';
 import { LoyaltyProvider } from './context/LoyaltyContext';
 import { useLoyalty } from './hooks/useLoyalty';
 
@@ -10,6 +10,7 @@ const RutSearchView = React.lazy(() => import('./views/RutSearchView'));
 const RegisterView = React.lazy(() => import('./views/RegisterView'));
 const DashboardView = React.lazy(() => import('./views/DashboardView'));
 const LocalAccessView = React.lazy(() => import('./views/LocalAccessView'));
+const PrivacidadView = React.lazy(() => import('./views/PrivacidadView'));
 
 // Import route guard
 import ScannerProtectedRoute from './components/ScannerProtectedRoute';
@@ -23,7 +24,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         // Paths that don't require "user" (customer session)
         // Scanner routes are handled by ScannerProtectedRoute
-        const isPublicPath = ['/register', '/tecnoscan', '/tecnoscan/con-rut', '/dashboard'].includes(location.pathname) || location.pathname.startsWith('/local/');
+        const isPublicPath = ['/register', '/privacidad', '/tecnoscan', '/tecnoscan/con-rut', '/dashboard'].includes(location.pathname) || location.pathname.startsWith('/local/');
 
         if (!user && !isPublicPath) {
             navigate('/register');
@@ -37,6 +38,38 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [showInstallBtn, setShowInstallBtn] = useState(false);
+
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (e: Event) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+            setShowInstallBtn(true);
+        };
+
+        const handleAppInstalled = () => {
+            setDeferredPrompt(null);
+            setShowInstallBtn(false);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.addEventListener('appinstalled', handleAppInstalled);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            window.removeEventListener('appinstalled', handleAppInstalled);
+        };
+    }, []);
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        setDeferredPrompt(null);
+        setShowInstallBtn(false);
+    };
+
     return (
         <Router basename="/tecnocard/">
             <LoyaltyProvider>
@@ -66,6 +99,7 @@ function App() {
                                 </ScannerProtectedRoute>
                             } />
                             <Route path="/register" element={<RegisterView />} />
+                            <Route path="/privacidad" element={<PrivacidadView />} />
                             <Route path="/dashboard" element={
                                 <ScannerProtectedRoute>
                                     <DashboardView />
@@ -76,6 +110,32 @@ function App() {
                     </React.Suspense>
                 </AuthGuard>
             </LoyaltyProvider>
+            <footer>
+                {showInstallBtn && (
+                    <div>
+                        <p style={{ fontSize: '1rem', fontWeight: 'bold' }}>Instala la app para acceder más rápido!</p>
+                        <button
+                            onClick={handleInstallClick}
+                            style={{
+                                background: 'var(--card-bg)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '20px',
+                                padding: '6px 16px',
+                                fontSize: '1rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                transition: 'opacity 0.2s'
+                            }}
+                        >
+                            Instalar App
+                        </button>
+                    </div>
+                )}
+                <div>
+                    © 2026 <a href="https://valentin.valra.cl" target="_blank" rel="noopener noreferrer">valentin.valra.cl</a> | <Link to="/privacidad">Política de Privacidad</Link>
+                </div>
+            </footer>
         </Router>
     );
 }

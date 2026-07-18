@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useLoyalty } from '../hooks/useLoyalty';
 import InfoModal from '../components/InfoModal';
 
@@ -8,6 +8,7 @@ const RegisterView = () => {
     const [error, setError] = useState('');
     const [showInfo, setShowInfo] = useState(false);
     const [logoClicks, setLogoClicks] = useState(0);
+    const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
     const navigate = useNavigate();
     const { registerUser } = useLoyalty();
 
@@ -97,6 +98,7 @@ const RegisterView = () => {
                     <label style={{ display: 'block', textAlign: 'left', marginBottom: '5px' }}>RUT:</label>
                     <input
                         type="text"
+                        id="user-rut"
                         value={rut}
                         onChange={handleRutChange}
                         placeholder="12.345.678-9"
@@ -105,7 +107,36 @@ const RegisterView = () => {
                     />
                 </div>
                 {error && <p style={{ color: 'red' }}>{error}</p>}
-                <button type="submit" style={{ padding: '14px', background: 'var(--card-bg)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold' }}>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', textAlign: 'left', margin: '5px 0' }}>
+                    <input
+                        type="checkbox"
+                        id="privacy-checkbox"
+                        checked={acceptedPrivacy}
+                        onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                        style={{ marginTop: '4px', width: '18px', height: '18px', cursor: 'pointer', flexShrink: 0 }}
+                        required
+                    />
+                    <label htmlFor="privacy-checkbox" style={{ fontSize: '13px', lineHeight: '1.4', cursor: 'pointer', userSelect: 'none', color: '#333' }}>
+                        Autorizo el tratamiento de mi RUT conforme a la <Link to="/privacidad" style={{ color: 'var(--card-bg)', fontWeight: 'bold', textDecoration: 'underline' }}>Política de Privacidad de Tecnocard</Link> para gestionar mis beneficios.
+                    </label>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={!acceptedPrivacy && rut.length >= 8}
+                    style={{
+                        padding: '14px',
+                        background: acceptedPrivacy ? 'var(--card-bg)' : '#ccc',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        fontWeight: 'bold',
+                        cursor: acceptedPrivacy ? 'pointer' : 'not-allowed',
+                        transition: 'background 0.2s ease'
+                    }}
+                >
                     Ir a la tarjeta
                 </button>
             </form>
