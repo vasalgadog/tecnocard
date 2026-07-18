@@ -24,6 +24,20 @@ export default defineConfig({
             sizes: '192x192',
             type: 'image/png'
           }
+        ],
+        shortcuts: [
+          {
+            name: 'Tecnocard',
+            short_name: 'Tecnocard',
+            description: 'Acceder a la tarjeta de fidelización',
+            url: '/tecnocard/register',
+            icons: [
+              {
+                src: 'img/logo.png',
+                sizes: '192x192'
+              }
+            ]
+          }
         ]
       }
     }),
